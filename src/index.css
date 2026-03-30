@@ -32,7 +32,7 @@ select {
 
 .control-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(180px, 220px));
+  grid-template-columns: repeat(9, minmax(170px, 220px));
   gap: 24px;
   align-items: end;
   margin-bottom: 20px;

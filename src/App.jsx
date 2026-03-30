@@ -34,6 +34,54 @@ const KICK_OPTIONS = [
   { value: '4', label: '4拍' },
 ]
 
+const SNARE_TONE_OPTIONS = [
+  { value: 'maple', label: 'メープル（ウォーム）' },
+  { value: 'bright', label: 'ブライト' },
+  { value: 'fat', label: 'ファット' },
+]
+
+const TOM_TONE_OPTIONS = [
+  { value: 'standard', label: 'スタンダード' },
+  { value: 'tight', label: 'タイト（高め）' },
+  { value: 'deep', label: 'ディープ（低め）' },
+]
+
+const FLOOR_TOM_TONE_OPTIONS = [
+  { value: 'standard', label: 'スタンダード' },
+  { value: 'tight', label: 'タイト（高め）' },
+  { value: 'deep', label: 'ディープ（低め）' },
+]
+
+const CYMBAL_TONE_OPTIONS = [
+  { value: 'tight', label: 'タイト' },
+  { value: 'open', label: 'オープン寄り' },
+  { value: 'dark', label: 'ダーク' },
+]
+
+const SNARE_TONE_PRESETS = {
+  maple: { hpf: 130, lpf: 4200, threshold: -24, ratio: 2.8, attack: 0.004, release: 0.14, volume: -6, rate: 0.94 },
+  bright: { hpf: 210, lpf: 7600, threshold: -19, ratio: 3.4, attack: 0.002, release: 0.1, volume: -4, rate: 1.05 },
+  fat: { hpf: 100, lpf: 3600, threshold: -26, ratio: 2.2, attack: 0.005, release: 0.18, volume: -5, rate: 0.9 },
+}
+
+const TOM_TONE_PRESETS = {
+  standard: { file: 'tom1.mp3', rate: 1 },
+  tight: { file: 'tom1.mp3', rate: 1.1 },
+  deep: { file: 'tom2.mp3', rate: 0.92 },
+}
+
+const FLOOR_TOM_TONE_PRESETS = {
+  standard: { file: 'tom3.mp3', rate: 1 },
+  tight: { file: 'tom2.mp3', rate: 1.06 },
+  deep: { file: 'tom3.mp3', rate: 0.9 },
+}
+
+const CYMBAL_TONE_PRESETS = {
+  tight: { file: 'hihat.mp3', baseUrl: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/', rate: 1.12, volume: -5 },
+  open: { file: 'CR78/crash.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 1.02, volume: -3.5 },
+  dark: { file: 'CR78/crash.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 0.9, volume: -4.5 },
+}
+
 const TOTAL_BARS_PER_PAGE = 16
 const CELL_SIZE = 4
 
@@ -315,47 +363,138 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [bpm, setBpm] = useState(90)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [snareTone, setSnareTone] = useState('maple')
+  const [tomTone, setTomTone] = useState('standard')
+  const [floorTomTone, setFloorTomTone] = useState('standard')
+  const [cymbalTone, setCymbalTone] = useState('tight')
+  const [kitReady, setKitReady] = useState(false)
+  const [snareReady, setSnareReady] = useState(false)
 
   const patterns = useMemo(() => {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
 
-  const accentSynthRef = useRef(null)
-  const kickSynthRef = useRef(null)
+  const drumKitRef = useRef(null)
+  const cymbalPlayerRef = useRef(null)
+  const snarePlayerRef = useRef(null)
+  const snareHighPassRef = useRef(null)
+  const snareLowPassRef = useRef(null)
+  const snareCompressorRef = useRef(null)
   const playEventIdRef = useRef(null)
+  const samplesReady = kitReady && snareReady
 
   useEffect(() => {
-    accentSynthRef.current = new Tone.MembraneSynth({
-      pitchDecay: 0.008,
-      octaves: 2,
-      envelope: {
-        attack: 0.001,
-        decay: 0.12,
-        sustain: 0,
-        release: 0.08,
-      },
+    snareHighPassRef.current = new Tone.Filter(140, 'highpass')
+    snareLowPassRef.current = new Tone.Filter(4700, 'lowpass')
+    snareCompressorRef.current = new Tone.Compressor({
+      threshold: -22,
+      ratio: 3,
+      attack: 0.003,
+      release: 0.12,
     }).toDestination()
 
-    kickSynthRef.current = new Tone.MembraneSynth({
-      pitchDecay: 0.03,
-      octaves: 6,
-      envelope: {
-        attack: 0.001,
-        decay: 0.3,
-        sustain: 0,
-        release: 0.15,
-      },
-    }).toDestination()
+    snareHighPassRef.current.connect(snareLowPassRef.current)
+    snareLowPassRef.current.connect(snareCompressorRef.current)
+
+    setSnareReady(false)
+    const snarePlayer = new Tone.Player({
+      url: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/snare.mp3',
+      fadeOut: 0.02,
+      onload: () => setSnareReady(true),
+    })
+    snarePlayer.connect(snareHighPassRef.current)
+    snarePlayerRef.current = snarePlayer
 
     Tone.Transport.bpm.value = bpm
 
     return () => {
       Tone.Transport.stop()
       Tone.Transport.cancel()
-      accentSynthRef.current?.dispose()
-      kickSynthRef.current?.dispose()
+      snarePlayerRef.current?.stop()
+      snarePlayerRef.current?.dispose()
+      cymbalPlayerRef.current?.stop()
+      cymbalPlayerRef.current?.dispose()
+      snareHighPassRef.current?.dispose()
+      snareLowPassRef.current?.dispose()
+      snareCompressorRef.current?.dispose()
     }
   }, [])
+
+  useEffect(() => {
+    const preset = SNARE_TONE_PRESETS[snareTone]
+    if (!preset) return
+    if (!snarePlayerRef.current || !snareHighPassRef.current || !snareLowPassRef.current || !snareCompressorRef.current) return
+
+    snarePlayerRef.current.playbackRate = preset.rate
+    snarePlayerRef.current.volume.value = preset.volume
+    snareHighPassRef.current.frequency.value = preset.hpf
+    snareLowPassRef.current.frequency.value = preset.lpf
+    snareCompressorRef.current.threshold.value = preset.threshold
+    snareCompressorRef.current.ratio.value = preset.ratio
+    snareCompressorRef.current.attack.value = preset.attack
+    snareCompressorRef.current.release.value = preset.release
+  }, [snareTone])
+
+  useEffect(() => {
+    const preset = TOM_TONE_PRESETS[tomTone]
+    const floorPreset = FLOOR_TOM_TONE_PRESETS[floorTomTone]
+    const cymbalPreset = CYMBAL_TONE_PRESETS[cymbalTone]
+    if (!preset || !floorPreset || !cymbalPreset) return
+
+    setKitReady(false)
+    let cancelled = false
+    let pendingLoads = 2
+    const markLoaded = () => {
+      if (cancelled) return
+      pendingLoads -= 1
+      if (pendingLoads <= 0) setKitReady(true)
+    }
+
+    if (cymbalPlayerRef.current) {
+      cymbalPlayerRef.current.stop()
+      cymbalPlayerRef.current.dispose()
+      cymbalPlayerRef.current = null
+    }
+
+    const players = new Tone.Players(
+      {
+        kick: 'kick.mp3',
+        tom: preset.file,
+        floorTom: floorPreset.file,
+        cymbal: 'hihat.mp3',
+      },
+      {
+        baseUrl: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/',
+        fadeOut: 0.03,
+        onload: markLoaded,
+        onerror: (error) => {
+          console.error('Kit sample load failed:', error)
+          markLoaded()
+        },
+      }
+    ).toDestination()
+    players.volume.value = -4
+    drumKitRef.current = players
+
+    const cymbalPlayer = new Tone.Player({
+      url: `${cymbalPreset.baseUrl}${cymbalPreset.file}`,
+      fadeOut: 0.08,
+      onload: markLoaded,
+      onerror: (error) => {
+        console.error('Cymbal sample load failed, fallback to hihat:', error)
+        markLoaded()
+      },
+    }).toDestination()
+    cymbalPlayerRef.current = cymbalPlayer
+
+    return () => {
+      cancelled = true
+      players.stopAll()
+      players.dispose()
+      cymbalPlayer.stop()
+      cymbalPlayer.dispose()
+    }
+  }, [tomTone, floorTomTone, cymbalTone])
 
   useEffect(() => {
     Tone.Transport.bpm.value = bpm
@@ -368,7 +507,7 @@ export default function App() {
   }
 
   const handlePlay = async () => {
-    if (!patterns.length) return
+    if (!patterns.length || !samplesReady) return
 
     await Tone.start()
 
@@ -393,19 +532,41 @@ export default function App() {
     playEventIdRef.current = Tone.Transport.scheduleRepeat((time) => {
       const accent = accentRow[stepIndex]
       const kick = kickRow[stepIndex]
+      const isRightHand = stepIndex % 2 === 0
 
       if (kick) {
-        kickSynthRef.current?.triggerAttackRelease('C1', '8n', time, 1)
+        drumKitRef.current?.player('kick')?.start(time)
       }
 
-      if (accent === '＜') {
-        accentSynthRef.current?.triggerAttackRelease('G3', '16n', time, 0.95)
-      } else if (accent === '✕') {
-        accentSynthRef.current?.triggerAttackRelease('A3', '16n', time, 1)
+      if (accent === '✕') {
+        const cymbalPlayer = cymbalPlayerRef.current
+        if (cymbalPlayer?.loaded) {
+          cymbalPlayer.playbackRate = CYMBAL_TONE_PRESETS[cymbalTone].rate
+          cymbalPlayer.volume.value = CYMBAL_TONE_PRESETS[cymbalTone].volume
+          cymbalPlayer.start(time)
+        } else {
+          const fallbackCymbal = drumKitRef.current?.player('cymbal')
+          if (fallbackCymbal) {
+            fallbackCymbal.playbackRate = Math.max(0.75, CYMBAL_TONE_PRESETS[cymbalTone].rate)
+            fallbackCymbal.start(time)
+          }
+        }
       } else if (accent === '△' || accent === '▲') {
-        accentSynthRef.current?.triggerAttackRelease('E3', '16n', time, 0.85)
+        // RLRL基準: R=フロアタム, L=タム
+        const tomKey = isRightHand ? 'floorTom' : 'tom'
+        const tomPlayer = drumKitRef.current?.player(tomKey)
+        if (tomPlayer) {
+          tomPlayer.playbackRate = isRightHand
+            ? FLOOR_TOM_TONE_PRESETS[floorTomTone].rate
+            : TOM_TONE_PRESETS[tomTone].rate
+          tomPlayer.start(time)
+        }
+      } else if (accent === '＜') {
+        snarePlayerRef.current?.start(time, 0, undefined, 1)
+      } else if (accent) {
+        snarePlayerRef.current?.start(time, 0, undefined, 0.85)
       } else {
-        accentSynthRef.current?.triggerAttackRelease('D3', '16n', time, 0.25)
+        snarePlayerRef.current?.start(time, 0, undefined, 0.62)
       }
 
       stepIndex += 1
@@ -480,12 +641,48 @@ export default function App() {
             ))}
           </select>
         </div>
+
+        <div className="control-item">
+          <label>スネア音色</label>
+          <select value={snareTone} onChange={(e) => setSnareTone(e.target.value)}>
+            {SNARE_TONE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="control-item">
+          <label>タム音色</label>
+          <select value={tomTone} onChange={(e) => setTomTone(e.target.value)}>
+            {TOM_TONE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="control-item">
+          <label>フロアタム音色</label>
+          <select value={floorTomTone} onChange={(e) => setFloorTomTone(e.target.value)}>
+            {FLOOR_TOM_TONE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="control-item">
+          <label>シンバル音色</label>
+          <select value={cymbalTone} onChange={(e) => setCymbalTone(e.target.value)}>
+            {CYMBAL_TONE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
       </section>
 
       <section className="button-row no-print">
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
-        <button onClick={handlePlay} disabled={isPlaying}>再生</button>
+        <button onClick={handlePlay} disabled={isPlaying || !samplesReady}>再生</button>
         <button onClick={handleStop} disabled={!isPlaying}>停止</button>
 
         <label className="bpm-control">

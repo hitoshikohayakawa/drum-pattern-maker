@@ -40,10 +40,12 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
     return symbol
   }
 
-  function getHandNoteY(symbol) {
+  function getHandNoteY(symbol, index) {
     const normalized = normalizeSymbol(symbol)
-    if (normalized === '▲') return floorTomY
-    if (normalized === '△') return tomY
+    if (normalized === '▲' || normalized === '△') {
+      const isRightHand = index % 2 === 0
+      return isRightHand ? floorTomY : tomY
+    }
     if (normalized === '✕') return lineYs[0] - 6
     return snareY
   }
@@ -117,7 +119,7 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
 
         {positions.map((x, index) => {
           const symbol = normalizeSymbol(accentRow[index])
-          const handY = getHandNoteY(symbol)
+          const handY = getHandNoteY(symbol, index)
           const hasKick = Boolean(kickRow[index])
           const isCymbal = symbol === '✕'
 

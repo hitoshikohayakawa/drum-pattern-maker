@@ -104,6 +104,29 @@ select {
   gap: 34px;
 }
 
+.abc-section {
+  margin-bottom: 32px;
+  padding: 16px;
+  border: 2px solid #222;
+  background: #fff;
+}
+
+.abc-section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.abc-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.svg-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .pattern-block {
   display: grid;
   grid-template-columns: 44px 1fr;

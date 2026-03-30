@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import * as Tone from 'tone'
+import SvgNotationPreview from './components/SvgNotationPreview'
 
 const NOTE_OPTIONS = [
   { value: '4th', label: '4部音符' },
@@ -371,8 +372,17 @@ export default function App() {
 
     await Tone.start()
 
-    const pattern = patterns[0]
-    const { accentRow, kickRow } = pattern
+    const mergedPattern = patterns.reduce(
+      (acc, pattern) => {
+        acc.accentRow.push(...pattern.accentRow)
+        acc.kickRow.push(...pattern.kickRow)
+        return acc
+      },
+      { accentRow: [], kickRow: [] }
+    )
+    const { accentRow, kickRow } = mergedPattern
+    if (!accentRow.length) return
+
     const stepDuration = getStepDuration()
 
     Tone.Transport.stop()
@@ -403,6 +413,7 @@ export default function App() {
       if (stepIndex >= accentRow.length) {
         Tone.Transport.stop()
         Tone.Transport.cancel()
+        playEventIdRef.current = null
         setIsPlaying(false)
       }
     }, stepDuration)
@@ -414,6 +425,7 @@ export default function App() {
   const handleStop = () => {
     Tone.Transport.stop()
     Tone.Transport.cancel()
+    playEventIdRef.current = null
     setIsPlaying(false)
   }
 
@@ -473,8 +485,8 @@ export default function App() {
       <section className="button-row no-print">
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
-        <button onClick={startPlayback}>再生</button>
-        <button onClick={stopPlayback}>停止</button>  
+        <button onClick={handlePlay} disabled={isPlaying}>再生</button>
+        <button onClick={handleStop} disabled={!isPlaying}>停止</button>
 
         <label className="bpm-control">
           BPM
@@ -500,47 +512,22 @@ export default function App() {
             <div>キック: {KICK_OPTIONS.find((item) => item.value === kickSetting)?.label}</div>
           </div>
 
-          <div className="pattern-list">
-            {patterns.map((pattern, index) => (
-              <PatternSvgRow
-                key={`${refreshKey}-${index}`}
-                pattern={pattern}
-                rowNumber={index + 1}
-                noteType={noteType}
-              />
-            ))}
+          <div className="abc-section">
+            <h2>SVGプレビュー</h2>
+            <div className="svg-preview-list">
+              {patterns.map((pattern, index) => (
+                <SvgNotationPreview
+                  key={`preview-${refreshKey}-${index}`}
+                  pattern={pattern}
+                  noteType={noteType}
+                  orchestration={orchestration}
+                />
+              ))}
+            </div>
           </div>
+
         </div>
       </section>
     </div>
   )
-}
-const startPlayback = async () => {
-  await Tone.start()
-
-  Tone.Transport.stop()
-  Tone.Transport.cancel()
-
-  const synth = new Tone.MembraneSynth().toDestination()
-
-  const bpmValue = Number(document.querySelector('input')?.value || 90)
-  Tone.Transport.bpm.value = bpmValue
-
-  const currentPattern = patterns[0] // とりあえず1行目再生
-
-  currentPattern.kickRow.forEach((kick, index) => {
-    if (kick === '●') {
-      const time = index * (60 / bpmValue / 2) // 8分想定
-      Tone.Transport.schedule((t) => {
-        synth.triggerAttackRelease('C1', '8n', t)
-      }, time)
-    }
-  })
-
-  Tone.Transport.start()
-  setIsPlaying(true)
-}
-const stopPlayback = () => {
-  Tone.Transport.stop()
-  setIsPlaying(false)
 }

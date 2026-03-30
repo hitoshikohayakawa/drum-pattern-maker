@@ -150,3 +150,17 @@ select {
     padding: 0;
   }
 }
+.bpm-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.bpm-control input {
+  width: 80px;
+  height: 42px;
+  border: 2px solid #222;
+  padding: 0 10px;
+  font-size: 16px;
+}

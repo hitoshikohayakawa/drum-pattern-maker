@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import * as Tone from 'tone'
 
 const NOTE_OPTIONS = [
   { value: '4th', label: '4部音符' },
@@ -190,11 +191,10 @@ function createPagePatterns(noteType, difficulty, bars, orchestration, kickSetti
 
 function PatternSvgRow({ pattern, rowNumber, noteType }) {
   const { accentRow, kickRow, totalSteps, stepsPerBar } = pattern
-  const quarterStep = getQuarterStep(noteType)
 
   const stepX = 72
   const cellGap = 26
-  const rowLeft = 34
+  const rowLeft = 52
 
   const positions = []
   let x = rowLeft
@@ -207,7 +207,7 @@ function PatternSvgRow({ pattern, rowNumber, noteType }) {
     }
   }
 
-  const width = x + 20
+  const width = x + 30
   const height = 210
 
   const accentY = 42
@@ -232,17 +232,7 @@ function PatternSvgRow({ pattern, rowNumber, noteType }) {
         height={height}
         viewBox={`0 0 ${width} ${height}`}
       >
-        {barStarts.map((index) => (
-          <line
-            key={`bar-${index}`}
-            x1={positions[index] - 28}
-            y1="18"
-            x2={positions[index] - 28}
-            y2="196"
-            stroke="#8f8f8f"
-            strokeWidth="4"
-          />
-        ))}
+        
 
         {accentRow.map((symbol, index) =>
           symbol ? (
@@ -289,8 +279,8 @@ function PatternSvgRow({ pattern, rowNumber, noteType }) {
                   <ellipse
                     cx={px}
                     cy={headY}
-                    rx="9"
-                    ry="7"
+                    rx="12"
+                    ry="10"
                     fill="#111"
                   />
                 </g>
@@ -305,7 +295,7 @@ function PatternSvgRow({ pattern, rowNumber, noteType }) {
               key={`kick-${index}`}
               cx={positions[index]}
               cy={kickY}
-              r="18"
+              r="15"
               fill="#111"
             />
           ) : null
@@ -322,10 +312,110 @@ export default function App() {
   const [orchestration, setOrchestration] = useState('none')
   const [kickSetting, setKickSetting] = useState('2')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [bpm, setBpm] = useState(90)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   const patterns = useMemo(() => {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
+
+  const accentSynthRef = useRef(null)
+  const kickSynthRef = useRef(null)
+  const playEventIdRef = useRef(null)
+
+  useEffect(() => {
+    accentSynthRef.current = new Tone.MembraneSynth({
+      pitchDecay: 0.008,
+      octaves: 2,
+      envelope: {
+        attack: 0.001,
+        decay: 0.12,
+        sustain: 0,
+        release: 0.08,
+      },
+    }).toDestination()
+
+    kickSynthRef.current = new Tone.MembraneSynth({
+      pitchDecay: 0.03,
+      octaves: 6,
+      envelope: {
+        attack: 0.001,
+        decay: 0.3,
+        sustain: 0,
+        release: 0.15,
+      },
+    }).toDestination()
+
+    Tone.Transport.bpm.value = bpm
+
+    return () => {
+      Tone.Transport.stop()
+      Tone.Transport.cancel()
+      accentSynthRef.current?.dispose()
+      kickSynthRef.current?.dispose()
+    }
+  }, [])
+
+  useEffect(() => {
+    Tone.Transport.bpm.value = bpm
+  }, [bpm])
+
+  const getStepDuration = () => {
+    if (noteType === '4th') return '4n'
+    if (noteType === '8th') return '8n'
+    return '16n'
+  }
+
+  const handlePlay = async () => {
+    if (!patterns.length) return
+
+    await Tone.start()
+
+    const pattern = patterns[0]
+    const { accentRow, kickRow } = pattern
+    const stepDuration = getStepDuration()
+
+    Tone.Transport.stop()
+    Tone.Transport.cancel()
+
+    let stepIndex = 0
+
+    playEventIdRef.current = Tone.Transport.scheduleRepeat((time) => {
+      const accent = accentRow[stepIndex]
+      const kick = kickRow[stepIndex]
+
+      if (kick) {
+        kickSynthRef.current?.triggerAttackRelease('C1', '8n', time, 1)
+      }
+
+      if (accent === '＜') {
+        accentSynthRef.current?.triggerAttackRelease('G3', '16n', time, 0.95)
+      } else if (accent === '✕') {
+        accentSynthRef.current?.triggerAttackRelease('A3', '16n', time, 1)
+      } else if (accent === '△' || accent === '▲') {
+        accentSynthRef.current?.triggerAttackRelease('E3', '16n', time, 0.85)
+      } else {
+        accentSynthRef.current?.triggerAttackRelease('D3', '16n', time, 0.25)
+      }
+
+      stepIndex += 1
+
+      if (stepIndex >= accentRow.length) {
+        Tone.Transport.stop()
+        Tone.Transport.cancel()
+        setIsPlaying(false)
+      }
+    }, stepDuration)
+
+    Tone.Transport.start()
+    setIsPlaying(true)
+  }
+
+  const handleStop = () => {
+    Tone.Transport.stop()
+    Tone.Transport.cancel()
+    setIsPlaying(false)
+  }
 
   return (
     <div className="app">
@@ -383,6 +473,20 @@ export default function App() {
       <section className="button-row no-print">
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
+        <button onClick={startPlayback}>再生</button>
+        <button onClick={stopPlayback}>停止</button>  
+
+        <label className="bpm-control">
+          BPM
+          <input
+            type="number"
+            min="40"
+            max="240"
+            value={bpm}
+            onChange={(e) => setBpm(Number(e.target.value))}
+          />
+        </label>
+
         <button onClick={() => window.print()}>印刷 / PDF保存</button>
       </section>
 
@@ -410,4 +514,33 @@ export default function App() {
       </section>
     </div>
   )
+}
+const startPlayback = async () => {
+  await Tone.start()
+
+  Tone.Transport.stop()
+  Tone.Transport.cancel()
+
+  const synth = new Tone.MembraneSynth().toDestination()
+
+  const bpmValue = Number(document.querySelector('input')?.value || 90)
+  Tone.Transport.bpm.value = bpmValue
+
+  const currentPattern = patterns[0] // とりあえず1行目再生
+
+  currentPattern.kickRow.forEach((kick, index) => {
+    if (kick === '●') {
+      const time = index * (60 / bpmValue / 2) // 8分想定
+      Tone.Transport.schedule((t) => {
+        synth.triggerAttackRelease('C1', '8n', t)
+      }, time)
+    }
+  })
+
+  Tone.Transport.start()
+  setIsPlaying(true)
+}
+const stopPlayback = () => {
+  Tone.Transport.stop()
+  setIsPlaying(false)
 }

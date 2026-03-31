@@ -39,6 +39,7 @@ export default function SvgNotationPreview({
   orchestration,
   mode = 'accent',
   showAccentMarks = true,
+  activeStepIndex = null,
 }) {
   if (!pattern) return <div className="abc-preview">プレビュー対象がありません</div>
 
@@ -59,6 +60,7 @@ export default function SvgNotationPreview({
   const beamThickness = 3
   const secondaryBeamOffset = 10
   const accentY = rowTop - 8
+  const activeColor = '#9acd32'
 
   const beamLevel = getBeamLevel(noteType)
   const groupSize = getGroupSize(noteType)
@@ -209,38 +211,40 @@ export default function SvgNotationPreview({
           const hasSnareLayer = symbol === 'S' || symbol === '＜' || hasLayer(symbol, 'S')
           const drawHandNote = mode === 'accent' || Boolean(symbol)
           const isBeamed = beamedIndexes.has(index)
+          const isActiveStep = activeStepIndex === index
           const stemEndY = isBeamed
             ? beamTop + (beamLevel > 1 ? secondaryBeamOffset + beamThickness : beamThickness)
             : handY - 40
+          const noteColor = isActiveStep ? activeColor : '#111'
 
           return (
             <g key={`note-${index}`}>
               {drawHandNote ? (
                 <>
-                  <line x1={x + 8} y1={handY - 2} x2={x + 8} y2={stemEndY} stroke="#111" strokeWidth="2.8" />
+                  <line x1={x + 8} y1={handY - 2} x2={x + 8} y2={stemEndY} stroke={noteColor} strokeWidth="2.8" />
                   {isCymbal ? (
                     <g>
-                      <line x1={x - 6.5} y1={handY - 5.5} x2={x + 6.5} y2={handY + 5.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1={x + 6.5} y1={handY - 5.5} x2={x - 6.5} y2={handY + 5.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x - 6.5} y1={handY - 5.5} x2={x + 6.5} y2={handY + 5.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={handY - 5.5} x2={x - 6.5} y2={handY + 5.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                     </g>
                   ) : null}
                   {hasHiHatLayer || hasOpenHiHatLayer ? (
                     <g>
-                      <line x1={x - 6.5} y1={lineYs[0] - 11.5} x2={x + 6.5} y2={lineYs[0] - 0.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1={x + 6.5} y1={lineYs[0] - 11.5} x2={x - 6.5} y2={lineYs[0] - 0.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x - 6.5} y1={lineYs[0] - 11.5} x2={x + 6.5} y2={lineYs[0] - 0.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={lineYs[0] - 11.5} x2={x - 6.5} y2={lineYs[0] - 0.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                       {hasOpenHiHatLayer ? (
-                        <circle cx={x} cy={lineYs[0] - 18} r="4.5" fill="none" stroke="#111" strokeWidth="1.5" />
+                        <circle cx={x} cy={lineYs[0] - 18} r="4.5" fill="none" stroke={noteColor} strokeWidth="1.5" />
                       ) : null}
                     </g>
                   ) : null}
                   {hasRideLayer ? (
                     <g>
-                      <line x1={x - 6.5} y1={lineYs[1] - 15.5} x2={x + 6.5} y2={lineYs[1] - 4.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1={x + 6.5} y1={lineYs[1] - 15.5} x2={x - 6.5} y2={lineYs[1] - 4.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x - 6.5} y1={lineYs[1] - 15.5} x2={x + 6.5} y2={lineYs[1] - 4.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={lineYs[1] - 15.5} x2={x - 6.5} y2={lineYs[1] - 4.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                     </g>
                   ) : null}
                   {(!isCymbal && !hasHiHatLayer && !hasOpenHiHatLayer && !hasRideLayer) || hasSnareLayer ? (
-                    <ellipse cx={x} cy={handY} rx="9.5" ry="7.5" fill="#111" transform={`rotate(-18 ${x} ${handY})`} />
+                    <ellipse cx={x} cy={handY} rx="9.5" ry="7.5" fill={noteColor} transform={`rotate(-18 ${x} ${handY})`} />
                   ) : null}
                 </>
               ) : null}
@@ -251,7 +255,7 @@ export default function SvgNotationPreview({
                   cy={bassDrumY}
                   rx="10.5"
                   ry="8.5"
-                  fill="#111"
+                  fill={noteColor}
                   transform={`rotate(-18 ${x - 1} ${bassDrumY})`}
                 />
               ) : null}

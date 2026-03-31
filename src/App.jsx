@@ -981,6 +981,7 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [bpm, setBpm] = useState(90)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [currentPlaybackStep, setCurrentPlaybackStep] = useState(null)
   const [kitLibrary, setKitLibrary] = useState('pearlMaster')
   const [snareTone, setSnareTone] = useState('maple')
   const [tomTone, setTomTone] = useState('standard')
@@ -1198,6 +1199,7 @@ export default function App() {
     if (!samplesReady) return
 
     await Tone.start()
+    setCurrentPlaybackStep(null)
 
     const mergedPattern =
       practiceMode === 'fillin'
@@ -1228,6 +1230,11 @@ export default function App() {
     let stepIndex = 0
 
     playEventIdRef.current = Tone.Transport.scheduleRepeat((time) => {
+      const currentStep = stepIndex
+      Tone.Draw.schedule(() => {
+        setCurrentPlaybackStep(currentStep)
+      }, time)
+
       const accent = accentRow[stepIndex]
       const kick = kickRow[stepIndex]
       const isRightHand = stepIndex % 2 === 0
@@ -1329,6 +1336,9 @@ export default function App() {
         Tone.Transport.stop()
         Tone.Transport.cancel()
         playEventIdRef.current = null
+        Tone.Draw.schedule(() => {
+          setCurrentPlaybackStep(null)
+        }, time)
         setIsPlaying(false)
       }
     }, stepDuration)
@@ -1341,8 +1351,27 @@ export default function App() {
     Tone.Transport.stop()
     Tone.Transport.cancel()
     playEventIdRef.current = null
+    setCurrentPlaybackStep(null)
     setIsPlaying(false)
   }
+
+  const activePatternOffsets = useMemo(() => {
+    let offset = 0
+    return patterns.map((pattern) => {
+      const start = offset
+      offset += pattern.totalSteps || 0
+      return start
+    })
+  }, [patterns])
+
+  const activeFillPatternOffsets = useMemo(() => {
+    let offset = 0
+    return fillPatterns.map((pattern) => {
+      const start = offset
+      offset += pattern.totalSteps || 0
+      return start
+    })
+  }, [fillPatterns])
 
   return (
     <div className="app">
@@ -1571,6 +1600,7 @@ export default function App() {
                     orchestration={orchestration}
                     mode="accent"
                     showAccentMarks
+                    activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activePatternOffsets[index]}
                   />
                 ))
               ) : (
@@ -1582,6 +1612,7 @@ export default function App() {
                     orchestration="tomCymbal"
                     mode="fillin"
                     showAccentMarks={false}
+                    activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activeFillPatternOffsets[index]}
                   />
                 ))
               )}

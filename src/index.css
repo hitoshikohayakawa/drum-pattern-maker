@@ -10,9 +10,11 @@
 
 body {
   margin: 0;
-  min-width: 1600px;
+  width: 100%;
+  min-width: 0;
   background: #efefef;
   color: #111;
+  overflow-x: hidden;
 }
 
 button,
@@ -21,6 +23,8 @@ select {
 }
 
 .app {
+  width: 100%;
+  max-width: 100vw;
   padding: 32px 40px 56px;
 }
 
@@ -30,12 +34,34 @@ select {
   font-weight: 700;
 }
 
+.practice-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  margin-bottom: 10px;
+}
+
+.practice-tab {
+  height: 40px;
+  padding: 0 16px;
+  border: 2px solid #222;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.practice-tab.is-active {
+  background: #111;
+  color: #fff;
+}
+
 .control-panel {
   display: grid;
   grid-template-columns: repeat(9, minmax(170px, 220px));
   gap: 24px;
   align-items: end;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .control-item {
@@ -59,6 +85,7 @@ select {
 
 .button-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -80,10 +107,12 @@ select {
 .sheet-area {
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
 .sheet-paper {
-  width: 1780px;
+  width: 100%;
+  max-width: 1780px;
   min-height: 1280px;
   background: #fff;
   border: 3px solid #222;
@@ -186,4 +215,118 @@ select {
   border: 2px solid #222;
   padding: 0 10px;
   font-size: 16px;
+}
+
+@media (max-width: 1024px) {
+  .app {
+    padding: 20px 16px 28px;
+  }
+
+  .app-header h1 {
+    margin-bottom: 20px;
+    font-size: 34px;
+    line-height: 1.25;
+  }
+
+  .practice-nav {
+    flex-wrap: wrap;
+    margin-top: 10px;
+    margin-bottom: 16px;
+  }
+
+  .practice-tab {
+    flex: 1 1 220px;
+    height: 42px;
+  }
+
+  .control-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .control-item label {
+    font-size: 14px;
+  }
+
+  .control-item select {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .button-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .button-row button {
+    width: 100%;
+    height: 44px;
+    padding: 0 10px;
+    font-size: 15px;
+  }
+
+  .bpm-control {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .bpm-control input {
+    width: 100px;
+    height: 44px;
+  }
+
+  .sheet-paper {
+    min-height: auto;
+    border-width: 2px;
+    padding: 14px 12px 18px;
+  }
+
+  .sheet-meta {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+
+  .abc-section {
+    margin-bottom: 14px;
+    padding: 12px;
+  }
+
+  .abc-section h2 {
+    font-size: 16px;
+  }
+
+  .svg-preview-list {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    padding: 16px 10px 22px;
+  }
+
+  .app-header h1 {
+    font-size: 30px;
+  }
+
+  .practice-tab {
+    flex: 1 1 100%;
+  }
+
+  .control-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .button-row .bpm-control,
+  .button-row button:last-child {
+    grid-column: 1 / -1;
+  }
 }

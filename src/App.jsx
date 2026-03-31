@@ -77,10 +77,212 @@ const FLOOR_TOM_TONE_PRESETS = {
 }
 
 const CYMBAL_TONE_PRESETS = {
-  tight: { file: 'hihat.mp3', baseUrl: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/', rate: 1.12, volume: -5 },
-  open: { file: 'CR78/crash.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 1.02, volume: -3.5 },
-  dark: { file: 'CR78/crash.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 0.9, volume: -4.5 },
+  tight: { file: 'berklee/chime_1.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 1.08, volume: -6.5 },
+  open: { file: 'berklee/chime_1.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 0.98, volume: -4.5 },
+  dark: { file: 'berklee/gong_1.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 0.9, volume: -6 },
 }
+
+const PRACTICE_MENU = [
+  { value: 'accent', label: 'アクセント練習' },
+  { value: 'fillin', label: 'フィルイン練習' },
+]
+
+const FILL_GROOVE_OPTIONS = [
+  { value: 'random', label: 'ランダム（複数パターン）' },
+  { value: 'straight', label: '基本8ビート' },
+  { value: 'syncopated', label: 'シンコペ8ビート' },
+  { value: 'ride', label: 'ライド8ビート' },
+]
+
+const FILL_LENGTH_OPTIONS = [
+  { value: '1bar', label: '1小節フィル' },
+  { value: 'half', label: '0.5小節フィル' },
+  { value: 'quarter', label: '0.25小節フィル' },
+]
+
+const FILL_PATTERN_OPTIONS = [
+  { value: 'basic', label: '基本パターン' },
+  { value: 'random', label: 'ランダム' },
+]
+
+const FILL_BAR_COUNT_OPTIONS = [
+  { value: '4', label: '4小節' },
+  { value: '16', label: '16小節' },
+]
+
+const BASIC_EIGHT_BEAT_LIBRARY = {
+  straight: [
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 8] },
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 10] },
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 12] },
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [2, 8] },
+  ],
+  syncopated: [
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 6, 10] },
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 7, 12] },
+    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 9, 14] },
+  ],
+  ride: [
+    { hand: ['R', '', 'R', '', 'S', '', 'R', '', 'R', '', 'R', '', 'S', '', 'R', ''], kick: [0, 8] },
+    { hand: ['R', '', 'R', '', 'S', '', 'R', '', 'R', '', 'R', '', 'S', '', 'R', ''], kick: [0, 10] },
+    { hand: ['R', '', 'R', '', 'S', '', 'R', '', 'R', '', 'R', '', 'S', '', 'R', ''], kick: [2, 8] },
+  ],
+}
+
+const ONE_BAR_FILLS = [
+  {
+    name: 'Snare 16th Burst',
+    hand: ['S', 'S', 'S', 'S', 'T', 'T', 'M', 'M', 'F', 'F', 'M', 'T', 'S', 'S', 'F', 'C'],
+    kick: [0, 8, 15],
+  },
+  {
+    name: 'Classic Around Toms',
+    hand: ['S', '', 'T', '', 'M', '', 'F', '', 'T', '', 'M', '', 'F', 'F', 'S', 'C'],
+    kick: [0, 7, 14, 15],
+  },
+  {
+    name: 'Linear Funk Fill',
+    hand: ['S', '', 'H', 'S', '', 'T', '', 'M', '', 'S', 'H', '', 'F', '', 'S', 'C'],
+    kick: [2, 6, 10, 14],
+  },
+  {
+    name: 'Triplet-ish Motion',
+    hand: ['S', 'S', '', 'T', 'T', '', 'M', 'M', '', 'F', 'F', '', 'S', 'S', 'F', 'C'],
+    kick: [0, 4, 8, 12, 15],
+  },
+  {
+    name: 'Descending Sweep',
+    hand: ['S', '', 'S', '', 'T', '', 'T', '', 'M', '', 'M', '', 'F', 'F', 'S', 'C'],
+    kick: [0, 6, 10, 15],
+  },
+  {
+    name: 'Linear Drop',
+    hand: ['S', '', 'H', '', 'T', '', 'S', '', 'M', '', 'H', '', 'F', '', 'S', 'C'],
+    kick: [1, 5, 9, 13, 15],
+  },
+  {
+    name: 'Tom Roll Ending',
+    hand: ['T', 'T', 'M', 'M', 'F', 'F', 'T', 'T', 'M', 'M', 'F', 'F', 'S', 'S', 'F', 'C'],
+    kick: [0, 8, 14, 15],
+  },
+  {
+    name: 'Snare To Crash',
+    hand: ['S', '', 'S', 'S', 'S', '', 'T', '', 'M', '', 'F', '', 'S', 'S', 'S', 'C'],
+    kick: [0, 4, 8, 12, 15],
+  },
+  {
+    name: 'Gallop Around Kit',
+    hand: ['S', 'T', '', 'M', 'F', '', 'T', 'M', '', 'F', 'S', '', 'T', 'F', 'S', 'C'],
+    kick: [0, 3, 6, 9, 12, 15],
+  },
+  {
+    name: 'Backbeat Release',
+    hand: ['S', '', 'H', '', 'S', '', 'T', '', 'M', '', 'F', '', 'S', '', 'S', 'C'],
+    kick: [0, 7, 11, 15],
+  },
+  {
+    name: 'Eight Stroke Around',
+    hand: ['S', 'S', 'T', 'T', 'M', 'M', 'F', 'F', 'S', 'S', 'T', 'T', 'M', 'F', 'S', 'C'],
+    kick: [0, 8, 14, 15],
+  },
+  {
+    name: 'Single Stroke Down',
+    hand: ['S', '', 'T', '', 'M', '', 'F', '', 'S', '', 'T', '', 'M', '', 'F', 'C'],
+    kick: [0, 4, 8, 12, 15],
+  },
+  {
+    name: 'Paradiddle Color',
+    hand: ['S', 'T', 'S', 'S', 'M', 'F', 'M', 'M', 'S', 'T', 'S', 'S', 'F', 'M', 'S', 'C'],
+    kick: [0, 6, 10, 15],
+  },
+  {
+    name: 'Two Voice Answer',
+    hand: ['S', '', 'S', '', 'T', 'M', 'F', '', 'S', '', 'T', '', 'M', 'F', 'S', 'C'],
+    kick: [1, 5, 9, 13, 15],
+  },
+  {
+    name: 'Late Bar Push',
+    hand: ['S', '', 'H', '', 'S', '', 'H', '', 'T', '', 'M', '', 'F', 'S', 'S', 'C'],
+    kick: [0, 8, 12, 14, 15],
+  },
+  {
+    name: 'Tom Cascade',
+    hand: ['T', '', 'T', '', 'M', '', 'M', '', 'F', '', 'F', '', 'T', 'M', 'F', 'C'],
+    kick: [0, 6, 10, 15],
+  },
+  {
+    name: 'Snare Burst Resolve',
+    hand: ['S', 'S', 'S', '', 'S', 'S', 'T', '', 'M', 'M', 'F', '', 'S', 'S', 'S', 'C'],
+    kick: [0, 4, 8, 12, 15],
+  },
+  {
+    name: 'Linear Trip Builder',
+    hand: ['S', '', 'T', 'S', '', 'M', 'S', '', 'F', 'S', '', 'T', 'M', '', 'S', 'C'],
+    kick: [1, 5, 9, 13, 15],
+  },
+]
+
+const BASIC_ONE_BAR_FILLS = [
+  ONE_BAR_FILLS[0],
+  ONE_BAR_FILLS[1],
+  ONE_BAR_FILLS[4],
+  ONE_BAR_FILLS[6],
+  ONE_BAR_FILLS[7],
+  ONE_BAR_FILLS[10],
+]
+
+const HALF_BAR_FILLS = [
+  { name: 'Half Snare Burst', hand: ['S', 'S', 'T', 'T', 'M', 'F', 'S', 'C'], kick: [0, 6, 7] },
+  { name: 'Half Around Toms', hand: ['T', '', 'M', '', 'F', '', 'S', 'C'], kick: [0, 4, 7] },
+  { name: 'Half Linear', hand: ['S', '', 'T', 'S', 'M', '', 'F', 'C'], kick: [1, 5, 7] },
+  { name: 'Half Descend', hand: ['S', 'T', 'M', 'F', 'T', 'M', 'S', 'C'], kick: [0, 4, 7] },
+  { name: 'Half Flam-ish', hand: ['S', '', 'S', 'T', 'M', 'F', 'S', 'C'], kick: [1, 6, 7] },
+  { name: 'Half Push Fill', hand: ['T', '', 'T', 'M', 'F', '', 'S', 'C'], kick: [0, 3, 7] },
+  { name: 'Half Snare Roll', hand: ['S', 'S', 'S', 'S', 'T', 'M', 'F', 'C'], kick: [0, 5, 7] },
+  { name: 'Half Kit Answer', hand: ['S', 'T', '', 'M', '', 'F', 'S', 'C'], kick: [0, 2, 6, 7] },
+  { name: 'Half Descend Burst', hand: ['S', 'T', 'M', 'F', 'S', 'T', 'F', 'C'], kick: [0, 4, 7] },
+  { name: 'Half Double Stroke', hand: ['S', 'S', 'T', 'T', 'M', 'M', 'F', 'C'], kick: [0, 6, 7] },
+  { name: 'Half Syncopated Answer', hand: ['S', '', 'T', 'M', '', 'F', 'S', 'C'], kick: [1, 3, 6, 7] },
+  { name: 'Half Floor Resolve', hand: ['T', 'M', 'F', 'F', 'S', '', 'S', 'C'], kick: [0, 4, 7] },
+  { name: 'Half RL Accent', hand: ['S', 'T', 'S', 'M', 'S', 'F', 'S', 'C'], kick: [1, 5, 7] },
+  { name: 'Half Late Crash', hand: ['S', '', 'S', '', 'T', 'M', 'F', 'C'], kick: [0, 5, 7] },
+  { name: 'Half Five Stroke Flavor', hand: ['S', 'S', 'S', 'S', 'T', 'M', 'S', 'C'], kick: [0, 4, 7] },
+]
+
+const BASIC_HALF_BAR_FILLS = [
+  HALF_BAR_FILLS[0],
+  HALF_BAR_FILLS[1],
+  HALF_BAR_FILLS[3],
+  HALF_BAR_FILLS[8],
+  HALF_BAR_FILLS[11],
+  HALF_BAR_FILLS[13],
+]
+
+const QUARTER_BAR_FILLS = [
+  { name: 'Quarter Pickup', hand: ['T', 'M', 'F', 'C'], kick: [0, 3] },
+  { name: 'Quarter Snap', hand: ['S', 'S', 'F', 'C'], kick: [1, 3] },
+  { name: 'Quarter Flam-ish', hand: ['S', 'T', 'S', 'C'], kick: [0, 2, 3] },
+  { name: 'Quarter Descend', hand: ['T', 'M', 'S', 'C'], kick: [0, 3] },
+  { name: 'Quarter Burst', hand: ['S', 'S', 'S', 'C'], kick: [1, 3] },
+  { name: 'Quarter Floor Lead', hand: ['F', 'F', 'S', 'C'], kick: [0, 2, 3] },
+  { name: 'Quarter Tom Answer', hand: ['T', 'S', 'F', 'C'], kick: [1, 3] },
+  { name: 'Quarter Single Sweep', hand: ['S', 'T', 'M', 'C'], kick: [0, 3] },
+  { name: 'Quarter Trip Push', hand: ['S', 'M', 'F', 'C'], kick: [1, 3] },
+  { name: 'Quarter Buzz Feel', hand: ['S', 'S', 'T', 'C'], kick: [0, 2, 3] },
+  { name: 'Quarter Low Resolve', hand: ['M', 'F', 'S', 'C'], kick: [0, 3] },
+  { name: 'Quarter Accent Drop', hand: ['T', 'F', 'S', 'C'], kick: [1, 3] },
+  { name: 'Quarter Reverse Answer', hand: ['F', 'M', 'S', 'C'], kick: [0, 2, 3] },
+  { name: 'Quarter Tight Pop', hand: ['S', 'T', 'S', 'C'], kick: [1, 3] },
+]
+
+const BASIC_QUARTER_BAR_FILLS = [
+  QUARTER_BAR_FILLS[0],
+  QUARTER_BAR_FILLS[1],
+  QUARTER_BAR_FILLS[3],
+  QUARTER_BAR_FILLS[5],
+  QUARTER_BAR_FILLS[6],
+  QUARTER_BAR_FILLS[8],
+]
 
 const TOTAL_BARS_PER_PAGE = 16
 const CELL_SIZE = 4
@@ -238,6 +440,105 @@ function createPagePatterns(noteType, difficulty, bars, orchestration, kickSetti
   )
 }
 
+function randomPick(list) {
+  return list[Math.floor(Math.random() * list.length)]
+}
+
+function createBarFromGroove(groove) {
+  const accentRow = Array(16).fill('')
+  const kickRow = Array(16).fill('')
+  groove.hand.forEach((symbol, index) => {
+    accentRow[index] = symbol || ''
+  })
+  groove.kick.forEach((index) => {
+    if (index >= 0 && index < 16) kickRow[index] = '●'
+  })
+  return { accentRow, kickRow }
+}
+
+function applySectionAtStep(accentRow, kickRow, startStep, section) {
+  section.hand.forEach((symbol, i) => {
+    accentRow[startStep + i] = symbol || ''
+  })
+  section.kick.forEach((index) => {
+    const target = startStep + index
+    if (target >= 0 && target < kickRow.length) kickRow[target] = '●'
+  })
+}
+
+function applyFillToBars(accentRow, kickRow, startBar, fill) {
+  const start = startBar * 16
+  fill.hand.forEach((symbol, i) => {
+    accentRow[start + i] = symbol || ''
+  })
+  fill.kick.forEach((index) => {
+    const target = start + index
+    if (target >= 0 && target < kickRow.length) kickRow[target] = '●'
+  })
+}
+
+function getFillLibrary(fillLengthMode, fillPatternMode) {
+  if (fillLengthMode === '1bar') {
+    return fillPatternMode === 'basic' ? BASIC_ONE_BAR_FILLS : ONE_BAR_FILLS
+  }
+  if (fillLengthMode === 'half') {
+    return fillPatternMode === 'basic' ? BASIC_HALF_BAR_FILLS : HALF_BAR_FILLS
+  }
+  return fillPatternMode === 'basic' ? BASIC_QUARTER_BAR_FILLS : QUARTER_BAR_FILLS
+}
+
+function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode) {
+  const groovePool = (() => {
+    if (grooveKey === 'random') {
+      return [
+        ...BASIC_EIGHT_BEAT_LIBRARY.straight,
+        ...BASIC_EIGHT_BEAT_LIBRARY.syncopated,
+        ...BASIC_EIGHT_BEAT_LIBRARY.ride,
+      ]
+    }
+    return BASIC_EIGHT_BEAT_LIBRARY[grooveKey] || BASIC_EIGHT_BEAT_LIBRARY.straight
+  })()
+  const selectedGroove = randomPick(groovePool)
+  const fillPool = getFillLibrary(fillLengthMode, fillPatternMode)
+
+  const accentRow = Array(64).fill('')
+  const kickRow = Array(64).fill('')
+
+  for (let bar = 0; bar < 4; bar += 1) {
+    const grooveBar = createBarFromGroove(selectedGroove)
+    for (let i = 0; i < 16; i += 1) {
+      const step = bar * 16 + i
+      accentRow[step] = grooveBar.accentRow[i]
+      kickRow[step] = grooveBar.kickRow[i]
+    }
+  }
+
+  if (fillLengthMode === '1bar') {
+    const fill = randomPick(fillPool)
+    applyFillToBars(accentRow, kickRow, 3, fill)
+  } else if (fillLengthMode === 'half') {
+    const fill = randomPick(fillPool)
+    applySectionAtStep(accentRow, kickRow, 56, fill)
+  } else if (fillLengthMode === 'quarter') {
+    const fill = randomPick(fillPool)
+    applySectionAtStep(accentRow, kickRow, 60, fill)
+  }
+
+  return {
+    accentRow,
+    kickRow,
+    stepsPerBar: 16,
+    totalSteps: 64,
+  }
+}
+
+function createFillInPracticePatterns(grooveKey, fillLengthMode, fillPatternMode, barCount) {
+  const phraseCount = Math.max(1, Number(barCount) / 4)
+  return Array.from({ length: phraseCount }, () =>
+    createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode)
+  )
+}
+
 function PatternSvgRow({ pattern, rowNumber, noteType }) {
   const { accentRow, kickRow, totalSteps, stepsPerBar } = pattern
 
@@ -355,11 +656,16 @@ function PatternSvgRow({ pattern, rowNumber, noteType }) {
 }
 
 export default function App() {
+  const [practiceMode, setPracticeMode] = useState('accent')
   const [noteType, setNoteType] = useState('8th')
   const [difficulty, setDifficulty] = useState('easy')
   const [bars, setBars] = useState('2')
   const [orchestration, setOrchestration] = useState('none')
   const [kickSetting, setKickSetting] = useState('2')
+  const [fillGroove, setFillGroove] = useState('random')
+  const [fillLengthMode, setFillLengthMode] = useState('1bar')
+  const [fillPatternMode, setFillPatternMode] = useState('basic')
+  const [fillBarCount, setFillBarCount] = useState('4')
   const [refreshKey, setRefreshKey] = useState(0)
   const [bpm, setBpm] = useState(90)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -373,6 +679,9 @@ export default function App() {
   const patterns = useMemo(() => {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
+  const fillPatterns = useMemo(() => {
+    return createFillInPracticePatterns(fillGroove, fillLengthMode, fillPatternMode, fillBarCount)
+  }, [fillGroove, fillLengthMode, fillPatternMode, fillBarCount, refreshKey])
 
   const drumKitRef = useRef(null)
   const cymbalPlayerRef = useRef(null)
@@ -462,6 +771,7 @@ export default function App() {
         tom: preset.file,
         floorTom: floorPreset.file,
         cymbal: 'hihat.mp3',
+        ride: 'hihat.mp3',
       },
       {
         baseUrl: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/',
@@ -507,22 +817,32 @@ export default function App() {
   }
 
   const handlePlay = async () => {
-    if (!patterns.length || !samplesReady) return
+    if (!samplesReady) return
 
     await Tone.start()
 
-    const mergedPattern = patterns.reduce(
-      (acc, pattern) => {
-        acc.accentRow.push(...pattern.accentRow)
-        acc.kickRow.push(...pattern.kickRow)
-        return acc
-      },
-      { accentRow: [], kickRow: [] }
-    )
+    const mergedPattern =
+      practiceMode === 'fillin'
+        ? fillPatterns.reduce(
+          (acc, pattern) => {
+            acc.accentRow.push(...pattern.accentRow)
+            acc.kickRow.push(...pattern.kickRow)
+            return acc
+          },
+          { accentRow: [], kickRow: [] }
+        )
+        : patterns.reduce(
+          (acc, pattern) => {
+            acc.accentRow.push(...pattern.accentRow)
+            acc.kickRow.push(...pattern.kickRow)
+            return acc
+          },
+          { accentRow: [], kickRow: [] }
+        )
     const { accentRow, kickRow } = mergedPattern
     if (!accentRow.length) return
 
-    const stepDuration = getStepDuration()
+    const stepDuration = practiceMode === 'fillin' ? '16n' : getStepDuration()
 
     Tone.Transport.stop()
     Tone.Transport.cancel()
@@ -561,12 +881,52 @@ export default function App() {
             : TOM_TONE_PRESETS[tomTone].rate
           tomPlayer.start(time)
         }
+      } else if (accent === 'H') {
+        const hihat = drumKitRef.current?.player('cymbal')
+        if (hihat) {
+          hihat.playbackRate = 1.08
+          hihat.volume.value = -7
+          hihat.start(time)
+        }
+      } else if (accent === 'C') {
+        const crash = cymbalPlayerRef.current
+        if (crash?.loaded) {
+          crash.playbackRate = CYMBAL_TONE_PRESETS[cymbalTone].rate
+          crash.volume.value = CYMBAL_TONE_PRESETS[cymbalTone].volume
+          crash.start(time)
+        }
+      } else if (accent === 'R') {
+        const ride = drumKitRef.current?.player('ride') || drumKitRef.current?.player('cymbal')
+        if (ride) {
+          ride.playbackRate = 1
+          ride.volume.value = -8
+          ride.start(time)
+        }
+      } else if (accent === 'T' || accent === 'M' || accent === 'F') {
+        const isFloor = accent === 'F'
+        const key = isFloor ? 'floorTom' : 'tom'
+        const tomPlayer = drumKitRef.current?.player(key)
+        if (tomPlayer) {
+          if (isFloor) {
+            tomPlayer.playbackRate = FLOOR_TOM_TONE_PRESETS[floorTomTone].rate
+          } else if (accent === 'M') {
+            tomPlayer.playbackRate = TOM_TONE_PRESETS[tomTone].rate * 0.96
+          } else {
+            tomPlayer.playbackRate = TOM_TONE_PRESETS[tomTone].rate * 1.12
+          }
+          tomPlayer.start(time)
+        }
+      } else if (accent === 'S') {
+        snarePlayerRef.current?.start(time, 0, undefined, 0.86)
       } else if (accent === '＜') {
         snarePlayerRef.current?.start(time, 0, undefined, 1)
       } else if (accent) {
         snarePlayerRef.current?.start(time, 0, undefined, 0.85)
       } else {
-        snarePlayerRef.current?.start(time, 0, undefined, 0.62)
+        if (practiceMode === 'accent') {
+          // アクセント練習は下段の連打表現に合わせてゴーストを鳴らす
+          snarePlayerRef.current?.start(time, 0, undefined, 0.62)
+        }
       }
 
       stepIndex += 1
@@ -594,53 +954,113 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>ドラム練習パターンメーカー</h1>
+        <nav className="practice-nav no-print">
+          {PRACTICE_MENU.map((item) => (
+            <button
+              key={item.value}
+              className={`practice-tab ${practiceMode === item.value ? 'is-active' : ''}`}
+              onClick={() => setPracticeMode(item.value)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
       <section className="control-panel no-print">
-        <div className="control-item">
-          <label>音符パターン</label>
-          <select value={noteType} onChange={(e) => setNoteType(e.target.value)}>
-            {NOTE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+        {practiceMode === 'accent' ? (
+          <>
+            <div className="control-item">
+              <label>音符パターン</label>
+              <select value={noteType} onChange={(e) => setNoteType(e.target.value)}>
+                {NOTE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="control-item">
-          <label>難易度</label>
-          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-            {DIFFICULTY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+            <div className="control-item">
+              <label>難易度</label>
+              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                {DIFFICULTY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="control-item">
-          <label>固定小節</label>
-          <select value={bars} onChange={(e) => setBars(e.target.value)}>
-            {BAR_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+            <div className="control-item">
+              <label>固定小節</label>
+              <select value={bars} onChange={(e) => setBars(e.target.value)}>
+                {BAR_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="control-item">
-          <label>タム・シンバル構成</label>
-          <select value={orchestration} onChange={(e) => setOrchestration(e.target.value)}>
-            {ORCHESTRATION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+            <div className="control-item">
+              <label>タム・シンバル構成</label>
+              <select value={orchestration} onChange={(e) => setOrchestration(e.target.value)}>
+                {ORCHESTRATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="control-item">
-          <label>キック設定</label>
-          <select value={kickSetting} onChange={(e) => setKickSetting(e.target.value)}>
-            {KICK_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+            <div className="control-item">
+              <label>キック設定</label>
+              <select value={kickSetting} onChange={(e) => setKickSetting(e.target.value)}>
+                {KICK_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="control-item">
+              <label>基本8ビート</label>
+              <select value={fillGroove} onChange={(e) => setFillGroove(e.target.value)}>
+                {FILL_GROOVE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="control-item">
+              <label>フィル長</label>
+              <select value={fillLengthMode} onChange={(e) => setFillLengthMode(e.target.value)}>
+                {FILL_LENGTH_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="control-item">
+              <label>フィルパターン</label>
+              <select value={fillPatternMode} onChange={(e) => setFillPatternMode(e.target.value)}>
+                {FILL_PATTERN_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="control-item">
+              <label>生成小節数</label>
+              <select value={fillBarCount} onChange={(e) => setFillBarCount(e.target.value)}>
+                {FILL_BAR_COUNT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="control-item">
+              <label>固定表示</label>
+              <select value={fillBarCount} disabled>
+                <option value={fillBarCount}>{fillBarCount}小節固定</option>
+              </select>
+            </div>
+          </>
+        )}
 
         <div className="control-item">
           <label>スネア音色</label>
@@ -702,24 +1122,51 @@ export default function App() {
       <section className="sheet-area">
         <div className="sheet-paper">
           <div className="sheet-meta">
-            <div>音符: {NOTE_OPTIONS.find((item) => item.value === noteType)?.label}</div>
-            <div>難易度: {DIFFICULTY_OPTIONS.find((item) => item.value === difficulty)?.label}</div>
-            <div>固定小節: {BAR_OPTIONS.find((item) => item.value === bars)?.label}</div>
-            <div>構成: {ORCHESTRATION_OPTIONS.find((item) => item.value === orchestration)?.label}</div>
-            <div>キック: {KICK_OPTIONS.find((item) => item.value === kickSetting)?.label}</div>
+            {practiceMode === 'accent' ? (
+              <>
+                <div>音符: {NOTE_OPTIONS.find((item) => item.value === noteType)?.label}</div>
+                <div>難易度: {DIFFICULTY_OPTIONS.find((item) => item.value === difficulty)?.label}</div>
+                <div>固定小節: {BAR_OPTIONS.find((item) => item.value === bars)?.label}</div>
+                <div>構成: {ORCHESTRATION_OPTIONS.find((item) => item.value === orchestration)?.label}</div>
+                <div>キック: {KICK_OPTIONS.find((item) => item.value === kickSetting)?.label}</div>
+              </>
+            ) : (
+              <>
+                <div>モード: フィルイン練習</div>
+                <div>基本ビート: {FILL_GROOVE_OPTIONS.find((item) => item.value === fillGroove)?.label}</div>
+                <div>フィル長: {FILL_LENGTH_OPTIONS.find((item) => item.value === fillLengthMode)?.label}</div>
+                <div>フィルパターン: {FILL_PATTERN_OPTIONS.find((item) => item.value === fillPatternMode)?.label}</div>
+                <div>表示: {fillBarCount}小節固定</div>
+              </>
+            )}
           </div>
 
           <div className="abc-section">
             <h2>SVGプレビュー</h2>
             <div className="svg-preview-list">
-              {patterns.map((pattern, index) => (
-                <SvgNotationPreview
-                  key={`preview-${refreshKey}-${index}`}
-                  pattern={pattern}
-                  noteType={noteType}
-                  orchestration={orchestration}
-                />
-              ))}
+              {practiceMode === 'accent' ? (
+                patterns.map((pattern, index) => (
+                  <SvgNotationPreview
+                    key={`preview-${refreshKey}-${index}`}
+                    pattern={pattern}
+                    noteType={noteType}
+                    orchestration={orchestration}
+                    mode="accent"
+                    showAccentMarks
+                  />
+                ))
+              ) : (
+                fillPatterns.map((pattern, index) => (
+                  <SvgNotationPreview
+                    key={`fill-preview-${refreshKey}-${index}`}
+                    pattern={pattern}
+                    noteType="16th"
+                    orchestration="tomCymbal"
+                    mode="fillin"
+                    showAccentMarks={false}
+                  />
+                ))
+              )}
             </div>
           </div>
 

@@ -10,7 +10,32 @@ function getGroupSize(noteType) {
   return 4
 }
 
-export default function SvgNotationPreview({ pattern, noteType, orchestration }) {
+function getVisibleRuns(indexes) {
+  if (!indexes.length) return []
+  const runs = [[indexes[0]]]
+  for (let i = 1; i < indexes.length; i += 1) {
+    const current = indexes[i]
+    const prev = indexes[i - 1]
+    if (current === prev + 1) {
+      runs[runs.length - 1].push(current)
+    } else {
+      runs.push([current])
+    }
+  }
+  return runs
+}
+
+function isCymbalSymbol(symbol) {
+  return symbol === '✕' || symbol === 'H' || symbol === 'C' || symbol === 'R'
+}
+
+export default function SvgNotationPreview({
+  pattern,
+  noteType,
+  orchestration,
+  mode = 'accent',
+  showAccentMarks = true,
+}) {
   if (!pattern) return <div className="abc-preview">プレビュー対象がありません</div>
 
   const { accentRow = [], kickRow = [], totalSteps = 0, stepsPerBar = 0 } = pattern
@@ -26,9 +51,10 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
   const tomY = lineYs[1]
   const floorTomY = lineYs[4]
   const bassDrumY = lineYs[4] + 18
-  const stemTop = rowTop + 8
+  const beamTop = rowTop - 10
+  const beamThickness = 3
+  const secondaryBeamOffset = 10
   const accentY = rowTop - 8
-  const beamGap = 8
 
   const beamLevel = getBeamLevel(noteType)
   const groupSize = getGroupSize(noteType)
@@ -42,6 +68,13 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
 
   function getHandNoteY(symbol, index) {
     const normalized = normalizeSymbol(symbol)
+    if (normalized === 'C') return lineYs[0] - 18
+    if (normalized === 'H') return lineYs[0] - 6
+    if (normalized === 'R') return lineYs[1] - 10
+    if (normalized === 'T') return lineYs[1]
+    if (normalized === 'M') return lineYs[2]
+    if (normalized === 'F') return floorTomY
+    if (normalized === 'S') return snareY
     if (normalized === '▲' || normalized === '△') {
       const isRightHand = index % 2 === 0
       return isRightHand ? floorTomY : tomY
@@ -55,6 +88,24 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
 
   const barStarts = []
   for (let i = 0; i <= totalSteps; i += stepsPerBar) barStarts.push(i)
+
+  const beamedIndexes = new Set()
+  groupStarts.forEach((start) => {
+    const end = Math.min(start + groupSize - 1, totalSteps - 1)
+    const indexes = []
+    for (let i = start; i <= end; i += 1) {
+      const symbol = normalizeSymbol(accentRow[i])
+      const drawHandNote = mode === 'accent' || Boolean(symbol)
+      if (drawHandNote && !isCymbalSymbol(symbol)) indexes.push(i)
+    }
+    getVisibleRuns(indexes)
+      .filter((run) => run.length > 1)
+      .forEach((run) => {
+        run.forEach((index) => {
+          beamedIndexes.add(index)
+        })
+      })
+  })
 
   return (
     <div className="abc-preview">
@@ -94,25 +145,49 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
 
         {groupStarts.map((start, groupIndex) => {
           const end = Math.min(start + groupSize - 1, totalSteps - 1)
-          const xs = positions.slice(start, end + 1)
-          const beamStart = xs[0] + 2
-          const beamEnd = xs[xs.length - 1] + 9
+          const indexes = []
+          for (let i = start; i <= end; i += 1) {
+            const symbol = normalizeSymbol(accentRow[i])
+            const drawHandNote = mode === 'accent' || Boolean(symbol)
+            if (drawHandNote && !isCymbalSymbol(symbol)) indexes.push(i)
+          }
+          const runs = getVisibleRuns(indexes).filter((run) => run.length > 1)
 
           return (
             <g key={`group-${groupIndex}`}>
-              {beamLevel > 0 && (
-                <line x1={beamStart} y1={stemTop} x2={beamEnd} y2={stemTop} stroke="#111" strokeWidth="4.2" />
-              )}
-              {beamLevel > 1 && (
-                <line
-                  x1={beamStart}
-                  y1={stemTop + beamGap}
-                  x2={beamEnd}
-                  y2={stemTop + beamGap}
-                  stroke="#111"
-                  strokeWidth="4.2"
-                />
-              )}
+              {runs.map((run, runIndex) => {
+                const beamStart = positions[run[0]] + 2
+                const beamEnd = positions[run[run.length - 1]] + 9
+                const runHasCymbal = run.some((index) => isCymbalSymbol(normalizeSymbol(accentRow[index])))
+                const secondaryBeamEnabled = beamLevel > 1 && !runHasCymbal
+
+                return (
+                  <g key={`run-${runIndex}`}>
+                    {beamLevel > 0 ? (
+                      <line
+                        x1={beamStart}
+                        y1={beamTop + beamThickness / 2}
+                        x2={beamEnd}
+                        y2={beamTop + beamThickness / 2}
+                        stroke="#111"
+                        strokeWidth={beamThickness}
+                        strokeLinecap="square"
+                      />
+                    ) : null}
+                    {secondaryBeamEnabled ? (
+                      <line
+                        x1={beamStart}
+                        y1={beamTop + secondaryBeamOffset + beamThickness / 2}
+                        x2={beamEnd}
+                        y2={beamTop + secondaryBeamOffset + beamThickness / 2}
+                        stroke="#111"
+                        strokeWidth={beamThickness}
+                        strokeLinecap="square"
+                      />
+                    ) : null}
+                  </g>
+                )
+              })}
             </g>
           )
         })}
@@ -121,24 +196,28 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
           const symbol = normalizeSymbol(accentRow[index])
           const handY = getHandNoteY(symbol, index)
           const hasKick = Boolean(kickRow[index])
-          const isCymbal = symbol === '✕'
+          const isCymbal = isCymbalSymbol(symbol)
+          const drawHandNote = mode === 'accent' || Boolean(symbol)
+          const isBeamed = beamedIndexes.has(index)
+          const stemEndY = isBeamed
+            ? beamTop + (beamLevel > 1 ? secondaryBeamOffset + beamThickness : beamThickness)
+            : handY - 40
 
           return (
             <g key={`note-${index}`}>
-              {beamLevel === 0 ? (
-                <line x1={x + 8} y1={handY - 2} x2={x + 8} y2={stemTop + 48} stroke="#111" strokeWidth="3.2" />
-              ) : (
-                <line x1={x + 8} y1={handY - 2} x2={x + 8} y2={stemTop} stroke="#111" strokeWidth="3.2" />
-              )}
-              {isCymbal ? (
-                <g>
-                  <circle cx={x} cy={handY} r="9.5" fill="#fff" stroke="#111" strokeWidth="2.2" />
-                  <line x1={x - 5.2} y1={handY - 5.2} x2={x + 5.2} y2={handY + 5.2} stroke="#111" strokeWidth="2" />
-                  <line x1={x + 5.2} y1={handY - 5.2} x2={x - 5.2} y2={handY + 5.2} stroke="#111" strokeWidth="2" />
-                </g>
-              ) : (
-                <ellipse cx={x} cy={handY} rx="9.5" ry="7.5" fill="#111" transform={`rotate(-18 ${x} ${handY})`} />
-              )}
+              {drawHandNote ? (
+                <>
+                  <line x1={x + 8} y1={handY - 2} x2={x + 8} y2={stemEndY} stroke="#111" strokeWidth="2.8" />
+                  {isCymbal ? (
+                    <g>
+                      <line x1={x - 6.5} y1={handY - 5.5} x2={x + 6.5} y2={handY + 5.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={handY - 5.5} x2={x - 6.5} y2={handY + 5.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                    </g>
+                  ) : (
+                    <ellipse cx={x} cy={handY} rx="9.5" ry="7.5" fill="#111" transform={`rotate(-18 ${x} ${handY})`} />
+                  )}
+                </>
+              ) : null}
 
               {hasKick ? (
                 <ellipse
@@ -151,7 +230,7 @@ export default function SvgNotationPreview({ pattern, noteType, orchestration })
                 />
               ) : null}
 
-              {symbol ? (
+              {showAccentMarks && symbol ? (
                 <text x={x + 1} y={accentY} fontSize="22" fontWeight="600" textAnchor="middle">{'>'}</text>
               ) : null}
             </g>

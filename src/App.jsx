@@ -58,28 +58,198 @@ const CYMBAL_TONE_OPTIONS = [
   { value: 'dark', label: 'ダーク' },
 ]
 
+const KIT_LIBRARY_OPTIONS = [
+  { value: 'pearlMaster', label: 'Pearl Master Studio' },
+  { value: 'webStandard', label: 'Web標準キット' },
+]
+
+const TONEJS_BASE_URL = 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/'
+const TONEJS_AUDIO_BASE_URL = 'https://tonejs.github.io/audio/'
+const PEARL_MASTER_BASE_URL = 'https://oramics.github.io/sampled/DRUMS/pearl-master-studio/samples/'
+
 const SNARE_TONE_PRESETS = {
   maple: { hpf: 130, lpf: 4200, threshold: -24, ratio: 2.8, attack: 0.004, release: 0.14, volume: -6, rate: 0.94 },
   bright: { hpf: 210, lpf: 7600, threshold: -19, ratio: 3.4, attack: 0.002, release: 0.1, volume: -4, rate: 1.05 },
   fat: { hpf: 100, lpf: 3600, threshold: -26, ratio: 2.2, attack: 0.005, release: 0.18, volume: -5, rate: 0.9 },
 }
 
+const SNARE_LIBRARY_RATE_OVERRIDES = {
+  pearlMaster: {
+    maple: 1,
+    bright: 1.04,
+    fat: 0.97,
+  },
+}
+
 const TOM_TONE_PRESETS = {
-  standard: { file: 'tom1.mp3', rate: 1 },
-  tight: { file: 'tom1.mp3', rate: 1.1 },
-  deep: { file: 'tom2.mp3', rate: 0.92 },
+  standard: { webFile: 'tom1.mp3', pearlFile: 'tom-01.wav', rate: 1 },
+  tight: { webFile: 'tom1.mp3', pearlFile: 'tom-01.wav', rate: 1.1 },
+  deep: { webFile: 'tom2.mp3', pearlFile: 'tom-02.wav', rate: 0.92 },
 }
 
 const FLOOR_TOM_TONE_PRESETS = {
-  standard: { file: 'tom3.mp3', rate: 1 },
-  tight: { file: 'tom2.mp3', rate: 1.06 },
-  deep: { file: 'tom3.mp3', rate: 0.9 },
+  standard: { webFile: 'tom3.mp3', pearlFile: 'tom-03.wav', rate: 1 },
+  tight: { webFile: 'tom2.mp3', pearlFile: 'tom-02.wav', rate: 1.06 },
+  deep: { webFile: 'tom3.mp3', pearlFile: 'tom-03.wav', rate: 0.9 },
 }
 
 const CYMBAL_TONE_PRESETS = {
-  tight: { file: 'berklee/chime_1.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 1.08, volume: -6.5 },
-  open: { file: 'berklee/chime_1.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 0.98, volume: -4.5 },
-  dark: { file: 'berklee/gong_1.mp3', baseUrl: 'https://tonejs.github.io/audio/', rate: 0.9, volume: -6 },
+  tight: { webFile: 'berklee/chime_1.mp3', webBaseUrl: TONEJS_AUDIO_BASE_URL, pearlFile: 'crash-01.wav', pearlBaseUrl: PEARL_MASTER_BASE_URL, rate: 1.08, volume: -6.5 },
+  open: { webFile: 'berklee/chime_1.mp3', webBaseUrl: TONEJS_AUDIO_BASE_URL, pearlFile: 'crash-02.wav', pearlBaseUrl: PEARL_MASTER_BASE_URL, rate: 0.98, volume: -4.5 },
+  dark: { webFile: 'berklee/gong_1.mp3', webBaseUrl: TONEJS_AUDIO_BASE_URL, pearlFile: 'crash-02.wav', pearlBaseUrl: PEARL_MASTER_BASE_URL, rate: 0.88, volume: -6 },
+}
+
+const KIT_LIBRARY_META = {
+  pearlMaster: {
+    label: 'Pearl Master Studio',
+    license: 'CC BY 3.0',
+    source: 'Sampled / Pearl Master Studio Pack 1 by enoe',
+  },
+  webStandard: {
+    label: 'Web標準キット',
+    license: 'デモ用サンプル',
+    source: 'Tone.js audio demo kit',
+  },
+}
+
+const SNARE_LIBRARY_SOURCES = {
+  pearlMaster: {
+    maple: `${PEARL_MASTER_BASE_URL}snare-02.wav`,
+    bright: `${PEARL_MASTER_BASE_URL}snare-01.wav`,
+    fat: `${PEARL_MASTER_BASE_URL}snare-03.wav`,
+  },
+  webStandard: {
+    maple: `${TONEJS_BASE_URL}snare.mp3`,
+    bright: `${TONEJS_BASE_URL}snare.mp3`,
+    fat: `${TONEJS_BASE_URL}snare.mp3`,
+  },
+}
+
+function getTomFile(kitLibrary, preset) {
+  return kitLibrary === 'pearlMaster' ? preset.pearlFile : preset.webFile
+}
+
+function getCymbalSource(kitLibrary, cymbalTone) {
+  const preset = CYMBAL_TONE_PRESETS[cymbalTone]
+  if (!preset) return null
+
+  if (kitLibrary === 'pearlMaster') {
+    return {
+      url: `${preset.pearlBaseUrl}${preset.pearlFile}`,
+      fadeOut: 1.8,
+      rate: preset.rate,
+      volume: preset.volume,
+    }
+  }
+
+  return {
+    url: `${preset.webBaseUrl}${preset.webFile}`,
+    fadeOut: 0.08,
+    rate: preset.rate,
+    volume: preset.volume,
+  }
+}
+
+function getKitConfig(kitLibrary, tomTone, floorTomTone) {
+  const tomPreset = TOM_TONE_PRESETS[tomTone]
+  const floorTomPreset = FLOOR_TOM_TONE_PRESETS[floorTomTone]
+  if (kitLibrary === 'pearlMaster') {
+    return {
+      baseUrl: PEARL_MASTER_BASE_URL,
+      volume: -2.5,
+      files: {
+        kick: 'kick-01.wav',
+        tom: getTomFile(kitLibrary, tomPreset),
+        midTom: 'tom-02.wav',
+        floorTom: getTomFile(kitLibrary, floorTomPreset),
+        hihat: 'hihat-closed.wav',
+        ride: 'ride-01.wav',
+      },
+      hihat: { rate: 1, volume: -8.5 },
+      ride: { rate: 0.98, volume: -9 },
+    }
+  }
+
+  return {
+    baseUrl: TONEJS_BASE_URL,
+    volume: -4,
+    files: {
+      kick: 'kick.mp3',
+      tom: getTomFile(kitLibrary, tomPreset),
+      midTom: 'tom2.mp3',
+      floorTom: getTomFile(kitLibrary, floorTomPreset),
+      hihat: 'hihat.mp3',
+      ride: 'hihat.mp3',
+    },
+    hihat: { rate: 1.08, volume: -7 },
+    ride: { rate: 1, volume: -8 },
+  }
+}
+
+function hasLayer(symbol, target) {
+  return typeof symbol === 'string' && symbol.includes(target)
+}
+
+function stopAndStartPlayer(player, time, playbackRate, volume) {
+  if (!player) return
+  if (typeof playbackRate === 'number') player.playbackRate = playbackRate
+  if (typeof volume === 'number') player.volume.value = volume
+  player.stop(time)
+  player.start(time)
+}
+
+function replaceHiHatWithOpen(symbol) {
+  if (symbol === 'H') return 'O'
+  if (symbol === 'HS') return 'OS'
+  return symbol
+}
+
+function maybeOpenHiHatInFill(fill, allowOpenHiHat) {
+  if (!allowOpenHiHat || !fill?.hand) return fill
+  const nextHand = [...fill.hand]
+  const candidateIndexes = []
+
+  nextHand.forEach((symbol, index) => {
+    if (symbol === 'H' || symbol === 'HS') candidateIndexes.push(index)
+  })
+
+  if (candidateIndexes.length) {
+    const targetIndex = randomPick(candidateIndexes)
+    nextHand[targetIndex] = replaceHiHatWithOpen(nextHand[targetIndex])
+    return { ...fill, hand: nextHand }
+  }
+
+  return fill
+}
+
+function maybeOpenHiHatInGrooveBar(accentRow, grooveKey, allowOpenHiHat) {
+  if (!allowOpenHiHat || grooveKey === 'ride') return accentRow
+  const nextAccentRow = [...accentRow]
+  const preferredIndexes = Math.random() < 0.5 ? [14] : [6, 14]
+
+  preferredIndexes.forEach((index) => {
+    const symbol = nextAccentRow[index]
+    if (symbol === 'H' || symbol === 'HS') {
+      nextAccentRow[index] = replaceHiHatWithOpen(symbol)
+    }
+  })
+
+  return nextAccentRow
+}
+
+function maybeOpenHiHatBeforeFill(accentRow, fillLengthMode, allowOpenHiHat) {
+  if (!allowOpenHiHat) return accentRow
+  const nextAccentRow = [...accentRow]
+  const targetIndex = fillLengthMode === '1bar' ? 46 : fillLengthMode === 'half' ? 54 : 58
+  const symbol = nextAccentRow[targetIndex]
+
+  if (symbol === 'H' || symbol === 'HS') {
+    nextAccentRow[targetIndex] = replaceHiHatWithOpen(symbol)
+  } else if (!symbol) {
+    nextAccentRow[targetIndex] = 'O'
+  }
+
+  return nextAccentRow
 }
 
 const PRACTICE_MENU = [
@@ -112,20 +282,20 @@ const FILL_BAR_COUNT_OPTIONS = [
 
 const BASIC_EIGHT_BEAT_LIBRARY = {
   straight: [
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 8] },
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 10] },
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 12] },
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [2, 8] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 8] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 10] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 12] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [2, 8] },
   ],
   syncopated: [
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 6, 10] },
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 7, 12] },
-    { hand: ['H', '', 'H', '', 'S', '', 'H', '', 'H', '', 'H', '', 'S', '', 'H', ''], kick: [0, 9, 14] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 6, 10] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 7, 12] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 9, 14] },
   ],
   ride: [
-    { hand: ['R', '', 'R', '', 'S', '', 'R', '', 'R', '', 'R', '', 'S', '', 'R', ''], kick: [0, 8] },
-    { hand: ['R', '', 'R', '', 'S', '', 'R', '', 'R', '', 'R', '', 'S', '', 'R', ''], kick: [0, 10] },
-    { hand: ['R', '', 'R', '', 'S', '', 'R', '', 'R', '', 'R', '', 'S', '', 'R', ''], kick: [2, 8] },
+    { hand: ['R', '', 'R', '', 'RS', '', 'R', '', 'R', '', 'R', '', 'RS', '', 'R', ''], kick: [0, 8] },
+    { hand: ['R', '', 'R', '', 'RS', '', 'R', '', 'R', '', 'R', '', 'RS', '', 'R', ''], kick: [0, 10] },
+    { hand: ['R', '', 'R', '', 'RS', '', 'R', '', 'R', '', 'R', '', 'RS', '', 'R', ''], kick: [2, 8] },
   ],
 }
 
@@ -220,6 +390,78 @@ const ONE_BAR_FILLS = [
     hand: ['S', '', 'T', 'S', '', 'M', 'S', '', 'F', 'S', '', 'T', 'M', '', 'S', 'C'],
     kick: [1, 5, 9, 13, 15],
   },
+  {
+    name: 'One Bar Classic Down Resolve',
+    hand: ['S', 'S', 'T', 'T', 'M', 'M', 'F', 'F', 'S', 'S', 'T', 'T', 'M', 'F', 'S', 'S'],
+    kick: [0, 4, 8, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Snare Roll Out',
+    hand: ['S', 'S', 'S', 'S', 'S', 'S', 'T', 'T', 'M', 'M', 'F', 'F', 'S', 'S', 'S', 'S'],
+    kick: [0, 6, 10, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Linear Resolve',
+    hand: ['S', '', 'T', 'S', '', 'M', 'S', '', 'F', 'S', '', 'T', 'S', '', 'F', 'S'],
+    kick: [1, 5, 9, 13],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Tom Ladder Resolve',
+    hand: ['T', 'T', 'M', 'M', 'F', 'F', 'T', 'T', 'M', 'M', 'F', 'F', 'T', 'M', 'F', 'S'],
+    kick: [0, 4, 8, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Pop Fill Resolve',
+    hand: ['S', '', 'S', '', 'T', '', 'M', '', 'F', '', 'T', '', 'M', 'F', 'S', 'S'],
+    kick: [0, 6, 10, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar RLRL Sweep Resolve',
+    hand: ['T', 'M', 'F', 'S', 'T', 'M', 'F', 'S', 'T', 'M', 'F', 'S', 'T', 'M', 'F', 'S'],
+    kick: [0, 4, 8, 12, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Bonham-ish Resolve',
+    hand: ['S', '', 'S', 'T', 'F', '', 'S', 'T', 'M', '', 'F', 'S', 'T', '', 'F', 'S'],
+    kick: [1, 4, 7, 10, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Double Stroke Resolve',
+    hand: ['S', 'S', 'T', 'T', 'S', 'S', 'M', 'M', 'F', 'F', 'T', 'T', 'M', 'M', 'S', 'S'],
+    kick: [0, 4, 8, 12, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Floor Drive Resolve',
+    hand: ['F', 'F', 'M', 'T', 'F', 'F', 'M', 'T', 'F', 'M', 'T', 'S', 'F', 'M', 'T', 'S'],
+    kick: [0, 3, 7, 11, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Drag Answer Resolve',
+    hand: ['S', 'S', 'S', '', 'T', 'T', 'M', '', 'F', 'F', 'S', '', 'T', 'M', 'F', 'S'],
+    kick: [0, 5, 9, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Gallop Resolve',
+    hand: ['S', 'T', '', 'M', 'F', '', 'T', 'M', '', 'F', 'S', '', 'T', 'F', 'S', 'S'],
+    kick: [0, 3, 6, 9, 12, 14],
+    resolve: 'nextCrash',
+  },
+  {
+    name: 'One Bar Classic Rock Resolve',
+    hand: ['S', '', 'T', '', 'M', '', 'F', '', 'S', '', 'T', '', 'M', '', 'F', 'S'],
+    kick: [0, 4, 8, 12, 14],
+    resolve: 'nextCrash',
+  },
 ]
 
 const BASIC_ONE_BAR_FILLS = [
@@ -229,6 +471,10 @@ const BASIC_ONE_BAR_FILLS = [
   ONE_BAR_FILLS[6],
   ONE_BAR_FILLS[7],
   ONE_BAR_FILLS[10],
+  ONE_BAR_FILLS[18],
+  ONE_BAR_FILLS[22],
+  ONE_BAR_FILLS[25],
+  ONE_BAR_FILLS[29],
 ]
 
 const HALF_BAR_FILLS = [
@@ -247,6 +493,18 @@ const HALF_BAR_FILLS = [
   { name: 'Half RL Accent', hand: ['S', 'T', 'S', 'M', 'S', 'F', 'S', 'C'], kick: [1, 5, 7] },
   { name: 'Half Late Crash', hand: ['S', '', 'S', '', 'T', 'M', 'F', 'C'], kick: [0, 5, 7] },
   { name: 'Half Five Stroke Flavor', hand: ['S', 'S', 'S', 'S', 'T', 'M', 'S', 'C'], kick: [0, 4, 7] },
+  { name: 'Half Classic 16th Down', hand: ['S', 'S', 'T', 'T', 'M', 'M', 'F', 'S'], kick: [0, 6] , resolve: 'nextCrash' },
+  { name: 'Half Bonham-ish Push', hand: ['S', '', 'S', 'T', 'F', '', 'F', 'S'], kick: [1, 4, 6], resolve: 'nextCrash' },
+  { name: 'Half Snare Drag Down', hand: ['S', 'S', 'S', 'T', 'M', 'F', 'F', 'S'], kick: [0, 5], resolve: 'nextCrash' },
+  { name: 'Half Tom Ladder', hand: ['T', 'T', 'M', 'M', 'F', 'F', 'M', 'S'], kick: [0, 4, 6], resolve: 'nextCrash' },
+  { name: 'Half Gallop Resolve', hand: ['S', 'T', '', 'M', 'F', '', 'F', 'S'], kick: [0, 2, 4, 6], resolve: 'nextCrash' },
+  { name: 'Half Double Kick Answer', hand: ['S', 'T', 'M', 'F', 'S', 'T', 'F', 'S'], kick: [0, 1, 4, 6], resolve: 'nextCrash' },
+  { name: 'Half Four On Floor Fill', hand: ['S', '', 'T', 'M', 'F', 'M', 'T', 'S'], kick: [0, 2, 4, 6], resolve: 'nextCrash' },
+  { name: 'Half RLRL Sweep', hand: ['T', 'M', 'F', 'S', 'T', 'M', 'F', 'S'], kick: [0, 4, 6], resolve: 'nextCrash' },
+  { name: 'Half Snare Answer', hand: ['S', '', 'S', '', 'T', 'M', 'F', 'S'], kick: [1, 5, 6], resolve: 'nextCrash' },
+  { name: 'Half Floor Tom Drive', hand: ['F', 'F', 'M', 'T', 'F', 'M', 'T', 'S'], kick: [0, 3, 6], resolve: 'nextCrash' },
+  { name: 'Half Triplet Sweep', hand: ['S', 'T', 'M', 'S', 'T', 'M', 'F', 'S'], kick: [0, 3, 6], resolve: 'nextCrash' },
+  { name: 'Half Classic Pop Ending', hand: ['S', '', 'T', '', 'M', 'F', 'S', 'S'], kick: [0, 4, 6], resolve: 'nextCrash' },
 ]
 
 const BASIC_HALF_BAR_FILLS = [
@@ -273,6 +531,18 @@ const QUARTER_BAR_FILLS = [
   { name: 'Quarter Accent Drop', hand: ['T', 'F', 'S', 'C'], kick: [1, 3] },
   { name: 'Quarter Reverse Answer', hand: ['F', 'M', 'S', 'C'], kick: [0, 2, 3] },
   { name: 'Quarter Tight Pop', hand: ['S', 'T', 'S', 'C'], kick: [1, 3] },
+  { name: 'Quarter Classic Down', hand: ['T', 'M', 'F', 'S'], kick: [0, 2], resolve: 'nextCrash' },
+  { name: 'Quarter Snare Into Floor', hand: ['S', 'S', 'F', 'S'], kick: [1, 2], resolve: 'nextCrash' },
+  { name: 'Quarter RL Sweep', hand: ['T', 'F', 'T', 'S'], kick: [0, 2], resolve: 'nextCrash' },
+  { name: 'Quarter Tom Snap', hand: ['T', 'M', 'S', 'S'], kick: [0, 3], resolve: 'nextCrash' },
+  { name: 'Quarter Drag Resolve', hand: ['S', 'S', 'T', 'S'], kick: [1, 2], resolve: 'nextCrash' },
+  { name: 'Quarter Low Pop', hand: ['F', 'M', 'F', 'S'], kick: [0, 2], resolve: 'nextCrash' },
+  { name: 'Quarter Single Stroke', hand: ['S', 'T', 'M', 'S'], kick: [0, 3], resolve: 'nextCrash' },
+  { name: 'Quarter Kick Answer', hand: ['T', 'S', 'F', 'S'], kick: [0, 1, 3], resolve: 'nextCrash' },
+  { name: 'Quarter Flam Touch', hand: ['S', 'T', 'S', 'S'], kick: [1, 3], resolve: 'nextCrash' },
+  { name: 'Quarter Floor Lead Out', hand: ['F', 'F', 'M', 'S'], kick: [0, 2], resolve: 'nextCrash' },
+  { name: 'Quarter Burst Resolve', hand: ['S', 'S', 'S', 'S'], kick: [1, 3], resolve: 'nextCrash' },
+  { name: 'Quarter TMS Resolve', hand: ['T', 'M', 'S', 'S'], kick: [0, 2], resolve: 'nextCrash' },
 ]
 
 const BASIC_QUARTER_BAR_FILLS = [
@@ -406,10 +676,6 @@ function createBarPattern(noteType, difficulty, orchestration, kickSetting) {
 
   applyKickToBar(kickRow, noteType, kickSetting)
 
-  accentRow.forEach((symbol, index) => {
-    if (symbol === '✕') kickRow[index] = '●'
-  })
-
   return { accentRow, kickRow, stepsPerBar }
 }
 
@@ -444,12 +710,13 @@ function randomPick(list) {
   return list[Math.floor(Math.random() * list.length)]
 }
 
-function createBarFromGroove(groove) {
-  const accentRow = Array(16).fill('')
+function createBarFromGroove(groove, grooveKey, allowOpenHiHat = false) {
+  let accentRow = Array(16).fill('')
   const kickRow = Array(16).fill('')
   groove.hand.forEach((symbol, index) => {
     accentRow[index] = symbol || ''
   })
+  accentRow = maybeOpenHiHatInGrooveBar(accentRow, grooveKey, allowOpenHiHat)
   groove.kick.forEach((index) => {
     if (index >= 0 && index < 16) kickRow[index] = '●'
   })
@@ -477,6 +744,16 @@ function applyFillToBars(accentRow, kickRow, startBar, fill) {
   })
 }
 
+function addCrashToPhraseStart(pattern) {
+  if (!pattern?.accentRow?.length) return pattern
+  const nextAccentRow = [...pattern.accentRow]
+  nextAccentRow[0] = 'C'
+  return {
+    ...pattern,
+    accentRow: nextAccentRow,
+  }
+}
+
 function getFillLibrary(fillLengthMode, fillPatternMode) {
   if (fillLengthMode === '1bar') {
     return fillPatternMode === 'basic' ? BASIC_ONE_BAR_FILLS : ONE_BAR_FILLS
@@ -487,7 +764,7 @@ function getFillLibrary(fillLengthMode, fillPatternMode) {
   return fillPatternMode === 'basic' ? BASIC_QUARTER_BAR_FILLS : QUARTER_BAR_FILLS
 }
 
-function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode) {
+function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat) {
   const groovePool = (() => {
     if (grooveKey === 'random') {
       return [
@@ -501,11 +778,11 @@ function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode) {
   const selectedGroove = randomPick(groovePool)
   const fillPool = getFillLibrary(fillLengthMode, fillPatternMode)
 
-  const accentRow = Array(64).fill('')
+  let accentRow = Array(64).fill('')
   const kickRow = Array(64).fill('')
 
   for (let bar = 0; bar < 4; bar += 1) {
-    const grooveBar = createBarFromGroove(selectedGroove)
+    const grooveBar = createBarFromGroove(selectedGroove, grooveKey, allowOpenHiHat)
     for (let i = 0; i < 16; i += 1) {
       const step = bar * 16 + i
       accentRow[step] = grooveBar.accentRow[i]
@@ -514,14 +791,38 @@ function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode) {
   }
 
   if (fillLengthMode === '1bar') {
-    const fill = randomPick(fillPool)
+    const fill = maybeOpenHiHatInFill(randomPick(fillPool), allowOpenHiHat)
+    accentRow = maybeOpenHiHatBeforeFill(accentRow, fillLengthMode, allowOpenHiHat)
     applyFillToBars(accentRow, kickRow, 3, fill)
+    return {
+      accentRow,
+      kickRow,
+      stepsPerBar: 16,
+      totalSteps: 64,
+      needsNextCrash: fill.resolve === 'nextCrash',
+    }
   } else if (fillLengthMode === 'half') {
-    const fill = randomPick(fillPool)
+    const fill = maybeOpenHiHatInFill(randomPick(fillPool), allowOpenHiHat)
+    accentRow = maybeOpenHiHatBeforeFill(accentRow, fillLengthMode, allowOpenHiHat)
     applySectionAtStep(accentRow, kickRow, 56, fill)
+    return {
+      accentRow,
+      kickRow,
+      stepsPerBar: 16,
+      totalSteps: 64,
+      needsNextCrash: fill.resolve === 'nextCrash',
+    }
   } else if (fillLengthMode === 'quarter') {
-    const fill = randomPick(fillPool)
+    const fill = maybeOpenHiHatInFill(randomPick(fillPool), allowOpenHiHat)
+    accentRow = maybeOpenHiHatBeforeFill(accentRow, fillLengthMode, allowOpenHiHat)
     applySectionAtStep(accentRow, kickRow, 60, fill)
+    return {
+      accentRow,
+      kickRow,
+      stepsPerBar: 16,
+      totalSteps: 64,
+      needsNextCrash: fill.resolve === 'nextCrash',
+    }
   }
 
   return {
@@ -529,14 +830,24 @@ function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode) {
     kickRow,
     stepsPerBar: 16,
     totalSteps: 64,
+    needsNextCrash: false,
   }
 }
 
-function createFillInPracticePatterns(grooveKey, fillLengthMode, fillPatternMode, barCount) {
+function createFillInPracticePatterns(grooveKey, fillLengthMode, fillPatternMode, barCount, allowOpenHiHat) {
   const phraseCount = Math.max(1, Number(barCount) / 4)
-  return Array.from({ length: phraseCount }, () =>
-    createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode)
-  )
+  const phrases = []
+
+  for (let index = 0; index < phraseCount; index += 1) {
+    let phrase = createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat)
+    const previousPhrase = phrases[index - 1]
+    if (previousPhrase?.needsNextCrash) {
+      phrase = addCrashToPhraseStart(phrase)
+    }
+    phrases.push(phrase)
+  }
+
+  return phrases
 }
 
 function PatternSvgRow({ pattern, rowNumber, noteType }) {
@@ -666,9 +977,11 @@ export default function App() {
   const [fillLengthMode, setFillLengthMode] = useState('1bar')
   const [fillPatternMode, setFillPatternMode] = useState('basic')
   const [fillBarCount, setFillBarCount] = useState('4')
+  const [fillOpenHiHat, setFillOpenHiHat] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [bpm, setBpm] = useState(90)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [kitLibrary, setKitLibrary] = useState('pearlMaster')
   const [snareTone, setSnareTone] = useState('maple')
   const [tomTone, setTomTone] = useState('standard')
   const [floorTomTone, setFloorTomTone] = useState('standard')
@@ -680,12 +993,21 @@ export default function App() {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
   const fillPatterns = useMemo(() => {
-    return createFillInPracticePatterns(fillGroove, fillLengthMode, fillPatternMode, fillBarCount)
-  }, [fillGroove, fillLengthMode, fillPatternMode, fillBarCount, refreshKey])
+    return createFillInPracticePatterns(fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat)
+  }, [fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey])
 
   const drumKitRef = useRef(null)
   const cymbalPlayerRef = useRef(null)
-  const snarePlayerRef = useRef(null)
+  const snarePlayersRef = useRef({
+    accent: [],
+    normal: [],
+    ghost: [],
+  })
+  const snareVoiceIndexRef = useRef({
+    accent: 0,
+    normal: 0,
+    ghost: 0,
+  })
   const snareHighPassRef = useRef(null)
   const snareLowPassRef = useRef(null)
   const snareCompressorRef = useRef(null)
@@ -705,22 +1027,11 @@ export default function App() {
     snareHighPassRef.current.connect(snareLowPassRef.current)
     snareLowPassRef.current.connect(snareCompressorRef.current)
 
-    setSnareReady(false)
-    const snarePlayer = new Tone.Player({
-      url: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/snare.mp3',
-      fadeOut: 0.02,
-      onload: () => setSnareReady(true),
-    })
-    snarePlayer.connect(snareHighPassRef.current)
-    snarePlayerRef.current = snarePlayer
-
     Tone.Transport.bpm.value = bpm
 
     return () => {
       Tone.Transport.stop()
       Tone.Transport.cancel()
-      snarePlayerRef.current?.stop()
-      snarePlayerRef.current?.dispose()
       cymbalPlayerRef.current?.stop()
       cymbalPlayerRef.current?.dispose()
       snareHighPassRef.current?.dispose()
@@ -730,25 +1041,89 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    const snareUrl = SNARE_LIBRARY_SOURCES[kitLibrary]?.[snareTone]
+    if (!snareUrl || !snareHighPassRef.current) return
+
+    setSnareReady(false)
+    let loadedCount = 0
+    const markLoaded = () => {
+      loadedCount += 1
+      if (loadedCount >= 12) setSnareReady(true)
+    }
+    const createSnarePlayer = () => {
+      const player = new Tone.Player({
+        url: snareUrl,
+        fadeOut: kitLibrary === 'pearlMaster' ? 0.08 : 0.02,
+        onload: markLoaded,
+        onerror: (error) => {
+          console.error('Snare sample load failed:', error)
+          markLoaded()
+        },
+      })
+      player.connect(snareHighPassRef.current)
+      return player
+    }
+
+    const createSnarePool = () => Array.from({ length: 4 }, () => createSnarePlayer())
+    const nextPlayers = {
+      accent: createSnarePool(),
+      normal: createSnarePool(),
+      ghost: createSnarePool(),
+    }
+
+    const previousPlayers = snarePlayersRef.current
+    snarePlayersRef.current = nextPlayers
+    snareVoiceIndexRef.current = {
+      accent: 0,
+      normal: 0,
+      ghost: 0,
+    }
+
+    return () => {
+      Object.values(previousPlayers || {}).flat().forEach((player) => {
+        player?.stop()
+        player?.dispose()
+      })
+      Object.values(nextPlayers).flat().forEach((player) => {
+        player.stop()
+        player.dispose()
+      })
+    }
+  }, [kitLibrary, snareTone])
+
+  useEffect(() => {
     const preset = SNARE_TONE_PRESETS[snareTone]
     if (!preset) return
-    if (!snarePlayerRef.current || !snareHighPassRef.current || !snareLowPassRef.current || !snareCompressorRef.current) return
+    if (!snarePlayersRef.current || !snareHighPassRef.current || !snareLowPassRef.current || !snareCompressorRef.current) return
 
-    snarePlayerRef.current.playbackRate = preset.rate
-    snarePlayerRef.current.volume.value = preset.volume
+    const libraryRate = SNARE_LIBRARY_RATE_OVERRIDES[kitLibrary]?.[snareTone] ?? preset.rate
+    const players = snarePlayersRef.current
+    if (!players.accent.length || !players.normal.length || !players.ghost.length) return
+
+    players.accent.forEach((player) => {
+      player.playbackRate = libraryRate
+      player.volume.value = preset.volume + 3
+    })
+    players.normal.forEach((player) => {
+      player.playbackRate = libraryRate
+      player.volume.value = preset.volume - 11
+    })
+    players.ghost.forEach((player) => {
+      player.playbackRate = libraryRate
+      player.volume.value = preset.volume - 18
+    })
     snareHighPassRef.current.frequency.value = preset.hpf
     snareLowPassRef.current.frequency.value = preset.lpf
     snareCompressorRef.current.threshold.value = preset.threshold
     snareCompressorRef.current.ratio.value = preset.ratio
     snareCompressorRef.current.attack.value = preset.attack
     snareCompressorRef.current.release.value = preset.release
-  }, [snareTone])
+  }, [snareTone, kitLibrary])
 
   useEffect(() => {
-    const preset = TOM_TONE_PRESETS[tomTone]
-    const floorPreset = FLOOR_TOM_TONE_PRESETS[floorTomTone]
-    const cymbalPreset = CYMBAL_TONE_PRESETS[cymbalTone]
-    if (!preset || !floorPreset || !cymbalPreset) return
+    const cymbalSource = getCymbalSource(kitLibrary, cymbalTone)
+    const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
+    if (!cymbalSource || !kitConfig) return
 
     setKitReady(false)
     let cancelled = false
@@ -766,15 +1141,9 @@ export default function App() {
     }
 
     const players = new Tone.Players(
+      kitConfig.files,
       {
-        kick: 'kick.mp3',
-        tom: preset.file,
-        floorTom: floorPreset.file,
-        cymbal: 'hihat.mp3',
-        ride: 'hihat.mp3',
-      },
-      {
-        baseUrl: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/',
+        baseUrl: kitConfig.baseUrl,
         fadeOut: 0.03,
         onload: markLoaded,
         onerror: (error) => {
@@ -783,12 +1152,12 @@ export default function App() {
         },
       }
     ).toDestination()
-    players.volume.value = -4
+    players.volume.value = kitConfig.volume
     drumKitRef.current = players
 
     const cymbalPlayer = new Tone.Player({
-      url: `${cymbalPreset.baseUrl}${cymbalPreset.file}`,
-      fadeOut: 0.08,
+      url: cymbalSource.url,
+      fadeOut: cymbalSource.fadeOut,
       onload: markLoaded,
       onerror: (error) => {
         console.error('Cymbal sample load failed, fallback to hihat:', error)
@@ -804,7 +1173,7 @@ export default function App() {
       cymbalPlayer.stop()
       cymbalPlayer.dispose()
     }
-  }, [tomTone, floorTomTone, cymbalTone])
+  }, [kitLibrary, tomTone, floorTomTone, cymbalTone])
 
   useEffect(() => {
     Tone.Transport.bpm.value = bpm
@@ -814,6 +1183,15 @@ export default function App() {
     if (noteType === '4th') return '4n'
     if (noteType === '8th') return '8n'
     return '16n'
+  }
+
+  const triggerSnare = (kind, time) => {
+    const pool = snarePlayersRef.current[kind]
+    if (!pool?.length) return
+    const voiceIndex = snareVoiceIndexRef.current[kind] % pool.length
+    const player = pool[voiceIndex]
+    snareVoiceIndexRef.current[kind] = (voiceIndex + 1) % pool.length
+    stopAndStartPlayer(player, time)
   }
 
   const handlePlay = async () => {
@@ -853,22 +1231,24 @@ export default function App() {
       const accent = accentRow[stepIndex]
       const kick = kickRow[stepIndex]
       const isRightHand = stepIndex % 2 === 0
+      const hasHiHatLayer = hasLayer(accent, 'H')
+      const hasOpenHiHatLayer = accent === 'O' || hasLayer(accent, 'O')
+      const hasRideLayer = hasLayer(accent, 'R')
+      const hasSnareLayer = accent === 'S' || accent === '＜' || hasLayer(accent, 'S')
 
       if (kick) {
-        drumKitRef.current?.player('kick')?.start(time)
+        stopAndStartPlayer(drumKitRef.current?.player('kick'), time)
       }
 
       if (accent === '✕') {
         const cymbalPlayer = cymbalPlayerRef.current
+        const cymbalSource = getCymbalSource(kitLibrary, cymbalTone)
         if (cymbalPlayer?.loaded) {
-          cymbalPlayer.playbackRate = CYMBAL_TONE_PRESETS[cymbalTone].rate
-          cymbalPlayer.volume.value = CYMBAL_TONE_PRESETS[cymbalTone].volume
-          cymbalPlayer.start(time)
+          stopAndStartPlayer(cymbalPlayer, time, cymbalSource.rate, cymbalSource.volume)
         } else {
-          const fallbackCymbal = drumKitRef.current?.player('cymbal')
+          const fallbackCymbal = drumKitRef.current?.player('hihat')
           if (fallbackCymbal) {
-            fallbackCymbal.playbackRate = Math.max(0.75, CYMBAL_TONE_PRESETS[cymbalTone].rate)
-            fallbackCymbal.start(time)
+            stopAndStartPlayer(fallbackCymbal, time, 1)
           }
         }
       } else if (accent === '△' || accent === '▲') {
@@ -876,57 +1256,71 @@ export default function App() {
         const tomKey = isRightHand ? 'floorTom' : 'tom'
         const tomPlayer = drumKitRef.current?.player(tomKey)
         if (tomPlayer) {
-          tomPlayer.playbackRate = isRightHand
-            ? FLOOR_TOM_TONE_PRESETS[floorTomTone].rate
-            : TOM_TONE_PRESETS[tomTone].rate
-          tomPlayer.start(time)
-        }
-      } else if (accent === 'H') {
-        const hihat = drumKitRef.current?.player('cymbal')
-        if (hihat) {
-          hihat.playbackRate = 1.08
-          hihat.volume.value = -7
-          hihat.start(time)
+          stopAndStartPlayer(
+            tomPlayer,
+            time,
+            isRightHand
+              ? FLOOR_TOM_TONE_PRESETS[floorTomTone].rate
+              : TOM_TONE_PRESETS[tomTone].rate
+          )
         }
       } else if (accent === 'C') {
         const crash = cymbalPlayerRef.current
+        const cymbalSource = getCymbalSource(kitLibrary, cymbalTone)
         if (crash?.loaded) {
-          crash.playbackRate = CYMBAL_TONE_PRESETS[cymbalTone].rate
-          crash.volume.value = CYMBAL_TONE_PRESETS[cymbalTone].volume
-          crash.start(time)
-        }
-      } else if (accent === 'R') {
-        const ride = drumKitRef.current?.player('ride') || drumKitRef.current?.player('cymbal')
-        if (ride) {
-          ride.playbackRate = 1
-          ride.volume.value = -8
-          ride.start(time)
+          stopAndStartPlayer(crash, time, cymbalSource.rate, cymbalSource.volume)
         }
       } else if (accent === 'T' || accent === 'M' || accent === 'F') {
         const isFloor = accent === 'F'
-        const key = isFloor ? 'floorTom' : 'tom'
+        const key = isFloor ? 'floorTom' : accent === 'M' ? 'midTom' : 'tom'
         const tomPlayer = drumKitRef.current?.player(key)
         if (tomPlayer) {
-          if (isFloor) {
-            tomPlayer.playbackRate = FLOOR_TOM_TONE_PRESETS[floorTomTone].rate
-          } else if (accent === 'M') {
-            tomPlayer.playbackRate = TOM_TONE_PRESETS[tomTone].rate * 0.96
-          } else {
-            tomPlayer.playbackRate = TOM_TONE_PRESETS[tomTone].rate * 1.12
-          }
-          tomPlayer.start(time)
+          stopAndStartPlayer(
+            tomPlayer,
+            time,
+            isFloor
+              ? FLOOR_TOM_TONE_PRESETS[floorTomTone].rate
+              : accent === 'M'
+                ? TOM_TONE_PRESETS[tomTone].rate * 0.96
+                : TOM_TONE_PRESETS[tomTone].rate * 1.12
+          )
         }
-      } else if (accent === 'S') {
-        snarePlayerRef.current?.start(time, 0, undefined, 0.86)
-      } else if (accent === '＜') {
-        snarePlayerRef.current?.start(time, 0, undefined, 1)
-      } else if (accent) {
-        snarePlayerRef.current?.start(time, 0, undefined, 0.85)
       } else {
         if (practiceMode === 'accent') {
-          // アクセント練習は下段の連打表現に合わせてゴーストを鳴らす
-          snarePlayerRef.current?.start(time, 0, undefined, 0.62)
+          // アクセント練習はアクセントとの差が聞き取りやすいよう、かなり小さめにする
+          triggerSnare('ghost', time)
         }
+      }
+
+      if (hasHiHatLayer || accent === 'H') {
+        const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
+        const hihat = drumKitRef.current?.player('hihat')
+        if (hihat) {
+          stopAndStartPlayer(hihat, time, kitConfig.hihat.rate, kitConfig.hihat.volume)
+        }
+      }
+
+      if (hasOpenHiHatLayer) {
+        const hihat = drumKitRef.current?.player('hihat')
+        if (hihat) {
+          stopAndStartPlayer(hihat, time, 0.9, -4.5)
+        }
+      }
+
+      if (hasRideLayer || accent === 'R') {
+        const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
+        const ride = drumKitRef.current?.player('ride') || drumKitRef.current?.player('hihat')
+        if (ride) {
+          stopAndStartPlayer(ride, time, kitConfig.ride.rate, kitConfig.ride.volume)
+        }
+      }
+
+      if (accent === '＜') {
+        triggerSnare('accent', time)
+      } else if (hasSnareLayer) {
+        triggerSnare(practiceMode === 'accent' ? 'normal' : 'accent', time)
+      } else if (accent && practiceMode === 'accent') {
+        triggerSnare('normal', time)
       }
 
       stepIndex += 1
@@ -1059,8 +1453,28 @@ export default function App() {
                 <option value={fillBarCount}>{fillBarCount}小節固定</option>
               </select>
             </div>
+
+            <div className="control-item control-item-checkbox">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={fillOpenHiHat}
+                  onChange={(e) => setFillOpenHiHat(e.target.checked)}
+                />
+                ハイハットオープン
+              </label>
+            </div>
           </>
         )}
+
+        <div className="control-item">
+          <label>音源ライブラリ</label>
+          <select value={kitLibrary} onChange={(e) => setKitLibrary(e.target.value)}>
+            {KIT_LIBRARY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="control-item">
           <label>スネア音色</label>
@@ -1137,8 +1551,12 @@ export default function App() {
                 <div>フィル長: {FILL_LENGTH_OPTIONS.find((item) => item.value === fillLengthMode)?.label}</div>
                 <div>フィルパターン: {FILL_PATTERN_OPTIONS.find((item) => item.value === fillPatternMode)?.label}</div>
                 <div>表示: {fillBarCount}小節固定</div>
+                <div>ハイハットオープン: {fillOpenHiHat ? 'あり' : 'なし'}</div>
               </>
             )}
+            <div>音源: {KIT_LIBRARY_META[kitLibrary].label}</div>
+            <div>ライセンス: {KIT_LIBRARY_META[kitLibrary].license}</div>
+            <div>出典: {KIT_LIBRARY_META[kitLibrary].source}</div>
           </div>
 
           <div className="abc-section">

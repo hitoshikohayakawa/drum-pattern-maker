@@ -26,7 +26,11 @@ function getVisibleRuns(indexes) {
 }
 
 function isCymbalSymbol(symbol) {
-  return symbol === '✕' || symbol === 'H' || symbol === 'C' || symbol === 'R'
+  return symbol === '✕' || symbol === 'H' || symbol === 'O' || symbol === 'C' || symbol === 'R'
+}
+
+function hasLayer(symbol, target) {
+  return typeof symbol === 'string' && symbol.includes(target)
 }
 
 export default function SvgNotationPreview({
@@ -47,7 +51,7 @@ export default function SvgNotationPreview({
   const width = rowLeft + totalSteps * stepX + 60
   const height = 190
   const lineYs = Array.from({ length: 5 }, (_, i) => rowTop + i * 14)
-  const snareY = lineYs[3]
+  const snareY = (lineYs[1] + lineYs[2]) / 2
   const tomY = lineYs[1]
   const floorTomY = lineYs[4]
   const bassDrumY = lineYs[4] + 18
@@ -70,6 +74,7 @@ export default function SvgNotationPreview({
     const normalized = normalizeSymbol(symbol)
     if (normalized === 'C') return lineYs[0] - 18
     if (normalized === 'H') return lineYs[0] - 6
+    if (normalized === 'O') return lineYs[0] - 6
     if (normalized === 'R') return lineYs[1] - 10
     if (normalized === 'T') return lineYs[1]
     if (normalized === 'M') return lineYs[2]
@@ -79,6 +84,7 @@ export default function SvgNotationPreview({
       const isRightHand = index % 2 === 0
       return isRightHand ? floorTomY : tomY
     }
+    if (hasLayer(normalized, 'S')) return snareY
     if (normalized === '✕') return lineYs[0] - 6
     return snareY
   }
@@ -197,6 +203,10 @@ export default function SvgNotationPreview({
           const handY = getHandNoteY(symbol, index)
           const hasKick = Boolean(kickRow[index])
           const isCymbal = isCymbalSymbol(symbol)
+          const hasHiHatLayer = hasLayer(symbol, 'H')
+          const hasOpenHiHatLayer = symbol === 'O' || hasLayer(symbol, 'O')
+          const hasRideLayer = hasLayer(symbol, 'R')
+          const hasSnareLayer = symbol === 'S' || symbol === '＜' || hasLayer(symbol, 'S')
           const drawHandNote = mode === 'accent' || Boolean(symbol)
           const isBeamed = beamedIndexes.has(index)
           const stemEndY = isBeamed
@@ -213,9 +223,25 @@ export default function SvgNotationPreview({
                       <line x1={x - 6.5} y1={handY - 5.5} x2={x + 6.5} y2={handY + 5.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
                       <line x1={x + 6.5} y1={handY - 5.5} x2={x - 6.5} y2={handY + 5.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
                     </g>
-                  ) : (
+                  ) : null}
+                  {hasHiHatLayer || hasOpenHiHatLayer ? (
+                    <g>
+                      <line x1={x - 6.5} y1={lineYs[0] - 11.5} x2={x + 6.5} y2={lineYs[0] - 0.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={lineYs[0] - 11.5} x2={x - 6.5} y2={lineYs[0] - 0.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      {hasOpenHiHatLayer ? (
+                        <circle cx={x} cy={lineYs[0] - 18} r="4.5" fill="none" stroke="#111" strokeWidth="1.5" />
+                      ) : null}
+                    </g>
+                  ) : null}
+                  {hasRideLayer ? (
+                    <g>
+                      <line x1={x - 6.5} y1={lineYs[1] - 15.5} x2={x + 6.5} y2={lineYs[1] - 4.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={lineYs[1] - 15.5} x2={x - 6.5} y2={lineYs[1] - 4.5} stroke="#111" strokeWidth="2.2" strokeLinecap="round" />
+                    </g>
+                  ) : null}
+                  {(!isCymbal && !hasHiHatLayer && !hasOpenHiHatLayer && !hasRideLayer) || hasSnareLayer ? (
                     <ellipse cx={x} cy={handY} rx="9.5" ry="7.5" fill="#111" transform={`rotate(-18 ${x} ${handY})`} />
-                  )}
+                  ) : null}
                 </>
               ) : null}
 

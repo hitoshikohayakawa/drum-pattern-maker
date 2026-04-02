@@ -67,6 +67,7 @@
 <div class="page">
   <section class="hero">
     <h1>Drum Pattern Maker フィルイン学習仕様書</h1>
+    <div class="note">改訂版: ハイハット open / close の日本式表記を修正済み（open = x の上に◯、closed = 通常の x）。</div>
     <div class="subtitle">DARYL’s Drum Channel Lesson 15 を基準データとして取り込みつつ、世界最強クラスのドラム学習・生成・再生に耐えるフィルイン仕様へ拡張するための開発文書。</div>
     <div class="meta">
       <span class="pill">用途: 開発環境常設ドキュメント</span>
@@ -198,8 +199,8 @@
         <tr><td>キー（legend）</td><td>全作品の先頭に必須</td><td>使用する全楽器、note head、articulation、beater、sticking を定義</td></tr>
         <tr><td>スネア</td><td>第三間（canonical internal rule）</td><td>調査文献でも最多派</td></tr>
         <tr><td>バスドラム</td><td>第一間（canonical internal rule）</td><td>調査文献でも多数派</td></tr>
-        <tr><td>ハイハット（手）</td><td>譜表上方のスペース、x-notehead</td><td>閉じ/開きは articulation で区別</td></tr>
-        <tr><td>ハイハット（足）</td><td>譜表下のスペース</td><td>foot splash/close は別 articulation</td></tr>
+        <tr><td>ハイハット（手）</td><td>譜表上方のスペース、x-notehead</td><td>日本式運用では closed HH = x-notehead、open HH = x-notehead の上に open circle（◯）を付与して区別</td></tr>
+        <tr><td>ハイハット（足）</td><td>譜表下のスペース</td><td>foot splash / foot close は別 articulation。手のハイハット open/close 記号とは分離して管理</td></tr>
         <tr><td>ライド</td><td>上線</td><td>x-notehead</td></tr>
         <tr><td>クラッシュ</td><td>譜表上の補助線</td><td>x-notehead</td></tr>
         <tr><td>タム</td><td>内部 ID で管理し、表示時に kit layout に応じて割当</td><td>2タム/3タム/4タム構成差に強くする</td></tr>
@@ -232,9 +233,36 @@
     <ul>
       <li>初心者向けモードでは、音価ごとのグリッド、強弱、句長の把握を優先し、必要なら簡略表示を許可する。</li>
       <li>上級モードでは、ゴーストノート、フラム、ドラッグ、オープン/クローズHH まで表現する。</li>
+      <li><strong>ハイハット表記の日本式補正:</strong> closed HH は通常の x-notehead。open HH は x-notehead の上に open circle（◯）を追加して表示する。先行版仕様書で open / close の対応が逆転していたため、本版で修正した。</li>
+      <li>原典ページの「6 HihatOpen」相当画像に描かれている通常の x-notehead は、本仕様では <strong>closed HH</strong> として扱う。open HH は必ず「x + 上部◯」で正規化する。</li>
       <li>キックとハンド系イベントは同 tick に共存可能。</li>
       <li>landing beat（多くは次小節頭）を強調表示できると学習効率が高い。</li>
     </ul>
+  </section>
+
+  <section class="section">
+    <h2>4.5 ハイハット open / close 正規化ルール（日本式）</h2>
+    <table>
+      <thead><tr><th>対象</th><th>表示</th><th>内部ラベル</th><th>実装メモ</th></tr></thead>
+      <tbody>
+        <tr><td>Closed Hi-Hat</td><td>x-notehead のみ</td><td><code>instrument: "hihat", articulation: "closed"</code></td><td>通常の手ハイハット。先行仕様書で open と誤対応していた箇所を修正。</td></tr>
+        <tr><td>Open Hi-Hat</td><td>x-notehead + 上部 open circle（◯）</td><td><code>instrument: "hihat", articulation: "open"</code></td><td>表示レイヤーでは x 記号と open circle を別パーツで重ねる。再生エンジンでは sustain を持たせ、後続の closed / foot close で choke 可能にする。</td></tr>
+        <tr><td>Foot Close</td><td>足ハイハット用の独立記号</td><td><code>instrument: "hihatFoot", articulation: "close"</code></td><td>手の closed HH と混同しない。open HH の停止トリガーとしても利用可。</td></tr>
+      </tbody>
+    </table>
+    <pre>{
+  "instrument": "hihat",
+  "articulation": "open",
+  "display": {
+    "notehead": "x",
+    "openCircle": true
+  },
+  "playback": {
+    "sample": "hh_open",
+    "sustain": true,
+    "canBeChokedBy": ["hihat.closed", "hihatFoot.close"]
+  }
+}</pre>
   </section>
 
   <section class="section">

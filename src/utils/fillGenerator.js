@@ -211,61 +211,80 @@ function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatter
 
 import { getTranscribedPattern } from './fillinData'
 
-export function createFillInPracticePatterns(fillGenre, grooveKey, fillLengthMode, fillPatternMode, barCount, allowOpenHiHat) {
+function createCurriculumPhrase(patternNo, fillGenre, grooveKey, allowOpenHiHat) {
+  const transcribed = getTranscribedPattern(patternNo)
+  const groovePool = getGenreGroovePool(fillGenre, grooveKey)
+  const selectedGroove = randomPick(groovePool)
+
+  let accentRow = Array(64).fill('')
+  const kickRow = Array(64).fill('')
+
+  // 100連発カリキュラムの基本は固定グルーヴ（デフォルト3小節）＋フィル
+  const grooveBars = transcribed.grooveBars || 3
+  
+  for (let bar = 0; bar < 4; bar += 1) {
+    const grooveBar = createBarFromGroove(selectedGroove, grooveKey, allowOpenHiHat)
+    for (let i = 0; i < 16; i += 1) {
+      const step = bar * 16 + i
+      accentRow[step] = grooveBar.accentRow[i]
+      kickRow[step] = grooveBar.kickRow[i]
+    }
+  }
+
+  // フィルイン部分の上書き
+  const fillStart = grooveBars * 16
+  const fillLength = transcribed.hand.length
+  
+  for (let i = 0; i < fillLength; i += 1) {
+    if (transcribed.hand[i] !== undefined && fillStart + i < 64) {
+      accentRow[fillStart + i] = transcribed.hand[i]
+    }
+    if (fillStart + i < 64) {
+      kickRow[fillStart + i] = ''
+    }
+  }
+  
+  transcribed.kick.forEach(k => {
+    if (k >= 0 && fillStart + k < 64) {
+      kickRow[fillStart + k] = '●'
+    }
+  })
+
+  return {
+    accentRow,
+    kickRow,
+    stepsPerBar: 16,
+    totalSteps: 64,
+    needsNextCrash: true,
+  }
+}
+
+export function createFillInPracticePatterns(fillGenre, grooveKey, fillLengthMode, fillPatternMode, barCount, allowOpenHiHat, notationEngine) {
   const phraseCount = Math.max(1, Number(barCount) / 4)
   const phrases = []
 
   for (let index = 0; index < phraseCount; index += 1) {
-    const patternNo = (index % 100) + 1
-    const transcribed = getTranscribedPattern(patternNo)
-
-    const groovePool = getGenreGroovePool(fillGenre, grooveKey)
-    const selectedGroove = randomPick(groovePool)
-
-    let accentRow = Array(64).fill('')
-    const kickRow = Array(64).fill('')
-
-    // 固定のGroove Bars (通常3小節)
-    for (let bar = 0; bar < 3; bar += 1) {
-      const grooveBar = createBarFromGroove(selectedGroove, grooveKey, allowOpenHiHat)
-      for (let i = 0; i < 16; i += 1) {
-        const step = bar * 16 + i
-        accentRow[step] = grooveBar.accentRow[i]
-        kickRow[step] = grooveBar.kickRow[i]
-      }
-    }
-
-    // 4小節目にフィルインを適用
-    const fillStart = 48 // 3小節 * 16
-    for (let i = 0; i < 16; i += 1) {
-      if (transcribed.hand[i]) {
-        accentRow[fillStart + i] = transcribed.hand[i]
-      }
-    }
-    transcribed.kick.forEach(k => {
-      if (k >= 0 && k < 16) {
-        kickRow[fillStart + k] = '●'
-      }
-    })
-
-    let phrase = {
-      accentRow,
-      kickRow,
-      stepsPerBar: 16,
-      totalSteps: 64,
-      needsNextCrash: true, // フィルインの後は常にクラッシュ
+    let phrase
+    
+    // 画像モード（100連発カリキュラム）の場合は専用のトランスクリプトを使用し、長さを画像に合わせる
+    if (notationEngine === 'image') {
+      const patternNo = (index % 100) + 1
+      phrase = createCurriculumPhrase(patternNo, fillGenre, grooveKey, allowOpenHiHat)
+      // カリキュラムは原則クラッシュを着地点とする
+      if (index === 0) phrase = addCrashToPhraseStart(phrase)
+    } 
+    // それ以外のVexFlow/SVGモードの場合は、ユーザーの「0.5小節」等のフィル長指定とジェネレーターを正しく適用する
+    else {
+      phrase = createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat)
     }
 
     const previousPhrase = phrases[index - 1]
     if (previousPhrase?.needsNextCrash) {
       phrase = addCrashToPhraseStart(phrase)
-    }
-
-    // 最初の小節もクラッシュから始める
-    if (index === 0) {
+    } else if (notationEngine === 'image' && index > 0) {
       phrase = addCrashToPhraseStart(phrase)
     }
-
+    
     phrases.push(phrase)
   }
 

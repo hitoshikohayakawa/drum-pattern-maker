@@ -70,8 +70,8 @@ export default function App() {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
   const fillPatterns = useMemo(() => {
-    return createFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat)
-  }, [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey])
+    return createFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, notationEngine)
+  }, [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, notationEngine, refreshKey])
 
   const drumKitRef = useRef(null)
   const cymbalPlayerRef = useRef(null)

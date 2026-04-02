@@ -14,6 +14,21 @@ function getStepCountForBar(noteType, mode) {
   return 16
 }
 
+function getBeamGroupFractions(vexflow, noteType, mode) {
+  const { Fraction } = vexflow
+
+  if (mode === 'fillin') {
+    return [new Fraction(1, 4)]
+  }
+  if (noteType === '8th') {
+    return [new Fraction(2, 4)]
+  }
+  if (noteType === '16th') {
+    return [new Fraction(1, 4)]
+  }
+  return [new Fraction(1, 4)]
+}
+
 function getVoice1Keys(symbol, mode) {
   const keys = []
   const str = String(symbol || '')
@@ -98,9 +113,11 @@ function buildVoiceData({
   stemDirection,
   baseDuration,
   mode,
+  preserveStepTiming = false,
 }) {
   const tickables = []
   const beamGroups = Array.from({ length: barCount }, () => [])
+  const tickablesByBar = Array.from({ length: barCount }, () => [])
   
   for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
     const barStartIndex = barIndex * stepsPerBar
@@ -111,14 +128,16 @@ function buildVoiceData({
       const symbol = slots[stepIndex]
       const keys = getKeys(symbol)
       const maxSpanSteps = barEndIndex - stepIndex
-      const { span, duration } = getLargestSpan(
-        stepIndex,
-        barStartIndex,
-        maxSpanSteps,
-        slots,
-        getKeys,
-        baseDuration
-      )
+      const { span, duration } = preserveStepTiming
+        ? { span: 1, duration: baseDuration }
+        : getLargestSpan(
+            stepIndex,
+            barStartIndex,
+            maxSpanSteps,
+            slots,
+            getKeys,
+            baseDuration
+          )
 
       if (keys.length > 0) {
         const { StaveNote, Articulation, ModifierPosition } = vexflow
@@ -129,8 +148,10 @@ function buildVoiceData({
           stem_direction: stemDirection
         })
 
-        // ドラム譜の視認性向上: 単発音符に旗を出さず、常に4分音符のように見せる
+        // ドラム譜の視認性向上: タイミングが8分/16分でも単発音符は4分音符の見た目に寄せる
         note.hasFlag = () => false
+        note.shouldDrawFlag = () => false
+        note.drawFlag = () => {}
 
         if (typeof note.setStemLength === 'function') {
           note.setStemLength(24)
@@ -154,16 +175,19 @@ function buildVoiceData({
         }
 
         tickables.push(note)
+        tickablesByBar[barIndex].push(note)
         beamGroups[barIndex].push(note)
       } else {
-        tickables.push(createGhostNote(vexflow, duration))
+        const ghostNote = createGhostNote(vexflow, duration)
+        tickables.push(ghostNote)
+        tickablesByBar[barIndex].push(ghostNote)
       }
 
       stepIndex += span
     }
   }
 
-  return { tickables, beamGroups }
+  return { tickables, beamGroups, tickablesByBar }
 }
 
 export default function VexFlowNotationPreview({
@@ -189,7 +213,7 @@ export default function VexFlowNotationPreview({
         const { loadBravura } = await import('../../vendor/vexflow/src/fonts/load_bravura.ts')
         if (cancelled || !containerRef.current) return
 
-        const { Beam, Flow, Formatter, Renderer, Stave, Voice, Fraction } = vexflow
+        const { Beam, Flow, Formatter, Renderer, Stave, Voice } = vexflow
         loadBravura()
         Flow.setMusicFont('Bravura')
 
@@ -200,14 +224,29 @@ export default function VexFlowNotationPreview({
         const kickRow = (pattern.kickRow || []).slice(0, totalSteps)
         const barCount = Math.max(1, Math.ceil(totalSteps / stepsPerBar))
 
-        const minWidthPerBar = baseDuration === '16' ? 320 : 200
-        const minTotalWidth = barCount * minWidthPerBar + 40
+        const leftPadding = 20
+        const firstBarExtraWidth = 82
+        const rightPadding = 28
+        const interBarGap = 6
+        const minWidthPerBar = baseDuration === '16' ? 370 : baseDuration === '8' ? 250 : 190
+        const minTotalWidth =
+          leftPadding +
+          firstBarExtraWidth +
+          rightPadding +
+          barCount * minWidthPerBar +
+          Math.max(0, barCount - 1) * interBarGap
         const containerWidth = container.parentElement.clientWidth || 1120
         const width = Math.max(minTotalWidth, containerWidth - 8)
         
-        const height = 164
-        const staveWidth = width - 40
-        const barWidth = staveWidth / barCount
+        const height = 212
+        const staveY = 50
+        const availableBarWidth =
+          width -
+          leftPadding -
+          rightPadding -
+          firstBarExtraWidth -
+          Math.max(0, barCount - 1) * interBarGap
+        const barWidth = availableBarWidth / barCount
 
         const renderer = new Renderer(containerRef.current, Renderer.Backends.SVG)
         renderer.resize(width, height)
@@ -221,10 +260,6 @@ export default function VexFlowNotationPreview({
           svg.style.width = '100%'
           svg.style.height = 'auto'
         }
-
-        const stave = new Stave(20, 22, staveWidth)
-        stave.addClef('percussion').addTimeSignature('4/4')
-        stave.setContext(context).draw()
 
         const voice1Data = buildVoiceData({
           vexflow,
@@ -247,50 +282,45 @@ export default function VexFlowNotationPreview({
           getKeys: getVoice2Keys,
           stemDirection: -1,
           baseDuration,
+          preserveStepTiming: true,
         })
 
-        const voice1 = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
-        const voice2 = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
+        let currentX = leftPadding
+        const beamGroupsFraction = getBeamGroupFractions(vexflow, noteType, mode)
+        for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
+          const currentBarWidth = barIndex === 0 ? barWidth + firstBarExtraWidth : barWidth
+          const stave = new Stave(currentX, staveY, currentBarWidth)
+          if (barIndex === 0) {
+            stave.addClef('percussion').addTimeSignature('4/4')
+          }
+          stave.setContext(context).draw()
 
-        voice1.addTickables(voice1Data.tickables)
-        voice2.addTickables(voice2Data.tickables)
+          const voice1 = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
+          const voice2 = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
+          voice1.addTickables(voice1Data.tickablesByBar[barIndex])
+          voice2.addTickables(voice2Data.tickablesByBar[barIndex])
 
-        const allBeams = []
-        if (baseDuration !== '4') {
-          const beamGroupsFraction = [new Fraction(1, 4)]
-          voice1Data.beamGroups.forEach((notesInBar) => {
-            const beams = Beam.generateBeams(notesInBar, {
+          const formatter = new Formatter()
+          formatter.joinVoices([voice1, voice2]).formatToStave([voice1, voice2], stave)
+
+          let beams = []
+          if (baseDuration !== '4') {
+            const flatBeamOffset = stave.getYForLine(0) - 20
+            beams = Beam.generateBeams(voice1Data.beamGroups[barIndex], {
               groups: beamGroupsFraction,
               beam_rests: false,
               show_stemlets: false,
               maintain_stem_directions: true,
+              flat_beams: true,
+              flat_beam_offset: flatBeamOffset,
             })
-            allBeams.push(...beams)
-          })
+          }
 
-          voice2Data.beamGroups.forEach((notesInBar) => {
-            const beams = Beam.generateBeams(notesInBar, {
-              groups: beamGroupsFraction,
-              beam_rests: false,
-              show_stemlets: false,
-              maintain_stem_directions: true,
-            })
-            allBeams.push(...beams)
-          })
-        }
+          voice1.draw(context, stave)
+          voice2.draw(context, stave)
+          beams.forEach((beam) => beam.setContext(context).draw())
 
-        new Formatter().joinVoices([voice1, voice2]).formatToStave([voice1, voice2], stave)
-
-        voice1.draw(context, stave)
-        voice2.draw(context, stave)
-        allBeams.forEach((beam) => beam.setContext(context).draw())
-
-        for (let barIndex = 1; barIndex < barCount; barIndex += 1) {
-          const x = 20 + barWidth * barIndex
-          context.beginPath()
-          context.moveTo(x, 22)
-          context.lineTo(x, 22 + 40)
-          context.stroke()
+          currentX += currentBarWidth + interBarGap
         }
       } catch (error) {
         console.error('VexFlow preview failed:', error)

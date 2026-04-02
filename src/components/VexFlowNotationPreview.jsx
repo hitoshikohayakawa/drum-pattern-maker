@@ -200,7 +200,7 @@ export default function VexFlowNotationPreview({
         const kickRow = (pattern.kickRow || []).slice(0, totalSteps)
         const barCount = Math.max(1, Math.ceil(totalSteps / stepsPerBar))
 
-        const minWidthPerBar = baseDuration === '16' ? 240 : 180
+        const minWidthPerBar = baseDuration === '16' ? 320 : 200
         const minTotalWidth = barCount * minWidthPerBar + 40
         const containerWidth = container.parentElement.clientWidth || 1120
         const width = Math.max(minTotalWidth, containerWidth - 8)
@@ -213,6 +213,14 @@ export default function VexFlowNotationPreview({
         renderer.resize(width, height)
         const context = renderer.getContext()
         context.setFont('Arial', 10, '')
+
+        // Make the SVG responsive and able to scale down for A4 print
+        const svg = context.svg
+        if (svg) {
+          svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+          svg.style.width = '100%'
+          svg.style.height = 'auto'
+        }
 
         const stave = new Stave(20, 22, staveWidth)
         stave.addClef('percussion').addTimeSignature('4/4')

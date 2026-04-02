@@ -72,7 +72,7 @@ function getLargestSpan(startIndex, barStartIndex, maxSpanSteps, slots, getKeys,
   for (const span of candidates) {
     if (span > maxSpanSteps) continue
     // ドラム譜特有の視認性向上: オフビートであっても後続が空白なら吸収して4分音符等の形にし、邪魔な旗を消す
-    // if (offsetInBar % span !== 0) continue 
+    if (offsetInBar % span !== 0) continue 
 
     let valid = true
     for (let index = 1; index < span; index += 1) {
@@ -128,6 +128,9 @@ function buildVoiceData({
           clef: 'percussion',
           stem_direction: stemDirection
         })
+
+        // ドラム譜の視認性向上: 単発音符に旗を出さず、常に4分音符のように見せる
+        note.hasFlag = () => false
 
         if (typeof note.setStemLength === 'function') {
           note.setStemLength(24)
@@ -244,10 +247,35 @@ export default function VexFlowNotationPreview({
         voice1.addTickables(voice1Data.tickables)
         voice2.addTickables(voice2Data.tickables)
 
+        const allBeams = []
+        if (baseDuration !== '4') {
+          const beamGroupsFraction = [new Fraction(1, 4)]
+          voice1Data.beamGroups.forEach((notesInBar) => {
+            const beams = Beam.generateBeams(notesInBar, {
+              groups: beamGroupsFraction,
+              beam_rests: false,
+              show_stemlets: false,
+              maintain_stem_directions: true,
+            })
+            allBeams.push(...beams)
+          })
+
+          voice2Data.beamGroups.forEach((notesInBar) => {
+            const beams = Beam.generateBeams(notesInBar, {
+              groups: beamGroupsFraction,
+              beam_rests: false,
+              show_stemlets: false,
+              maintain_stem_directions: true,
+            })
+            allBeams.push(...beams)
+          })
+        }
+
         new Formatter().joinVoices([voice1, voice2]).formatToStave([voice1, voice2], stave)
 
         voice1.draw(context, stave)
         voice2.draw(context, stave)
+        allBeams.forEach((beam) => beam.setContext(context).draw())
 
         for (let barIndex = 1; barIndex < barCount; barIndex += 1) {
           const x = 20 + barWidth * barIndex
@@ -255,31 +283,6 @@ export default function VexFlowNotationPreview({
           context.moveTo(x, 22)
           context.lineTo(x, 22 + 40)
           context.stroke()
-        }
-
-        if (baseDuration !== '4') {
-          const beamGroupsFraction = [new Fraction(1, 4)]
-          voice1Data.beamGroups.forEach((notesInBar) => {
-            Beam.generateBeams(notesInBar, {
-              groups: beamGroupsFraction,
-              beam_rests: false,
-              show_stemlets: false,
-              maintain_stem_directions: true,
-            }).forEach((beam) => {
-              beam.setContext(context).draw()
-            })
-          })
-
-          voice2Data.beamGroups.forEach((notesInBar) => {
-            Beam.generateBeams(notesInBar, {
-              groups: beamGroupsFraction,
-              beam_rests: false,
-              show_stemlets: false,
-              maintain_stem_directions: true,
-            }).forEach((beam) => {
-              beam.setContext(context).draw()
-            })
-          })
         }
       } catch (error) {
         console.error('VexFlow preview failed:', error)

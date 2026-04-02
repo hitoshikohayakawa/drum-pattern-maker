@@ -15,9 +15,10 @@ const DIFFICULTY_OPTIONS = [
 ]
 
 const BAR_OPTIONS = [
-  { value: '2', label: '2小節固定' },
-  { value: '4', label: '4小節固定' },
   { value: '16', label: '16小節固定' },
+  { value: '8', label: '8小節固定' },
+  { value: '4', label: '4小節固定' },
+  { value: '2', label: '2小節固定' },
 ]
 
 const ORCHESTRATION_OPTIONS = [
@@ -198,6 +199,18 @@ function stopAndStartPlayer(player, time, playbackRate, volume) {
   player.start(time)
 }
 
+async function unlockAudioContext() {
+  try {
+    await Tone.start()
+    const context = Tone.getContext()
+    if (context.state !== 'running') {
+      await context.resume()
+    }
+  } catch (error) {
+    console.error('Audio context unlock failed:', error)
+  }
+}
+
 function replaceHiHatWithOpen(symbol) {
   if (symbol === 'H') return 'O'
   if (symbol === 'HS') return 'OS'
@@ -264,6 +277,13 @@ const FILL_GROOVE_OPTIONS = [
   { value: 'ride', label: 'ライド8ビート' },
 ]
 
+const FILL_GENRE_OPTIONS = [
+  { value: 'rock', label: 'ROCK' },
+  { value: 'pops', label: 'POPS' },
+  { value: 'blues', label: 'Blues' },
+  { value: 'jazz', label: 'JAZZ' },
+]
+
 const FILL_LENGTH_OPTIONS = [
   { value: '1bar', label: '1小節フィル' },
   { value: 'half', label: '0.5小節フィル' },
@@ -276,8 +296,9 @@ const FILL_PATTERN_OPTIONS = [
 ]
 
 const FILL_BAR_COUNT_OPTIONS = [
-  { value: '4', label: '4小節' },
+  { value: '32', label: '32小節' },
   { value: '16', label: '16小節' },
+  { value: '4', label: '4小節' },
 ]
 
 const BASIC_EIGHT_BEAT_LIBRARY = {
@@ -296,6 +317,33 @@ const BASIC_EIGHT_BEAT_LIBRARY = {
     { hand: ['R', '', 'R', '', 'RS', '', 'R', '', 'R', '', 'R', '', 'RS', '', 'R', ''], kick: [0, 8] },
     { hand: ['R', '', 'R', '', 'RS', '', 'R', '', 'R', '', 'R', '', 'RS', '', 'R', ''], kick: [0, 10] },
     { hand: ['R', '', 'R', '', 'RS', '', 'R', '', 'R', '', 'R', '', 'RS', '', 'R', ''], kick: [2, 8] },
+  ],
+}
+
+const GENRE_GROOVE_LIBRARY = {
+  rock: [
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 8] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 10] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 7, 8] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 8, 12] },
+  ],
+  pops: [
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 8] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 10] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [2, 8] },
+    { hand: ['H', '', 'H', '', 'HS', '', 'H', '', 'H', '', 'H', '', 'HS', '', 'H', ''], kick: [0, 9] },
+  ],
+  blues: [
+    { hand: ['H', '', 'H', 'H', 'HS', '', 'H', 'H', 'H', '', 'H', 'H', 'HS', '', 'H', 'H'], kick: [0, 8] },
+    { hand: ['H', '', 'H', 'H', 'HS', '', 'H', 'H', 'H', '', 'H', 'H', 'HS', '', 'H', 'H'], kick: [0, 6, 8] },
+    { hand: ['H', '', 'H', 'H', 'HS', '', 'H', 'H', 'H', '', 'H', 'H', 'HS', '', 'H', 'H'], kick: [0, 9, 12] },
+    { hand: ['R', '', 'R', 'R', 'RS', '', 'R', 'R', 'R', '', 'R', 'R', 'RS', '', 'R', 'R'], kick: [0, 8] },
+  ],
+  jazz: [
+    { hand: ['R', '', 'R', 'R', 'RS', '', 'R', 'R', 'R', '', 'R', 'R', 'RS', '', 'R', 'R'], kick: [0] },
+    { hand: ['R', '', 'R', 'R', 'RS', '', 'R', 'R', 'R', '', 'R', 'R', 'RS', '', 'R', 'R'], kick: [0, 10] },
+    { hand: ['R', '', 'R', 'R', 'RS', '', 'R', 'R', 'R', '', 'R', 'R', 'RS', '', 'R', 'R'], kick: [2, 10] },
+    { hand: ['R', '', 'R', 'R', 'RS', '', 'R', 'R', 'R', '', 'R', 'R', 'RS', '', 'R', 'R'], kick: [0, 12] },
   ],
 }
 
@@ -554,6 +602,73 @@ const BASIC_QUARTER_BAR_FILLS = [
   QUARTER_BAR_FILLS[8],
 ]
 
+const FILL_GENRE_PROFILES = {
+  rock: {
+    grooveFallback: 'straight',
+    groovePool: GENRE_GROOVE_LIBRARY.rock,
+    fills: {
+      basic: {
+        '1bar': [0, 1, 4, 6, 10, 18, 22, 25],
+        half: [0, 1, 3, 8, 15, 18, 21, 26],
+        quarter: [0, 3, 6, 8, 14, 15, 18, 24],
+      },
+      random: {
+        '1bar': [0, 1, 4, 6, 7, 8, 10, 11, 15, 18, 19, 20, 21, 22, 25, 29],
+        half: [0, 1, 3, 6, 8, 9, 11, 13, 15, 18, 19, 21, 22, 24, 26],
+        quarter: [0, 1, 3, 5, 6, 8, 10, 11, 14, 15, 16, 19, 21, 24, 25],
+      },
+    },
+  },
+  pops: {
+    grooveFallback: 'straight',
+    groovePool: GENRE_GROOVE_LIBRARY.pops,
+    fills: {
+      basic: {
+        '1bar': [1, 4, 7, 11, 18, 21, 22, 29],
+        half: [1, 2, 4, 7, 13, 19, 24, 26],
+        quarter: [1, 3, 6, 8, 17, 18, 20, 26],
+      },
+      random: {
+        '1bar': [1, 4, 7, 9, 11, 13, 15, 18, 20, 21, 22, 26, 29],
+        half: [1, 2, 4, 7, 10, 12, 13, 15, 17, 19, 23, 24, 26],
+        quarter: [1, 3, 4, 6, 8, 9, 12, 13, 17, 18, 20, 23, 26],
+      },
+    },
+  },
+  blues: {
+    grooveFallback: 'syncopated',
+    groovePool: GENRE_GROOVE_LIBRARY.blues,
+    fills: {
+      basic: {
+        '1bar': [3, 7, 8, 13, 20, 24, 26, 28],
+        half: [4, 6, 10, 13, 18, 22, 25, 27],
+        quarter: [2, 8, 9, 12, 18, 22, 24, 25],
+      },
+      random: {
+        '1bar': [2, 3, 7, 8, 9, 12, 13, 14, 17, 20, 24, 26, 27, 28],
+        half: [4, 5, 6, 10, 12, 13, 14, 16, 18, 20, 22, 25, 27],
+        quarter: [2, 4, 7, 8, 9, 10, 12, 13, 18, 22, 24, 25],
+      },
+    },
+  },
+  jazz: {
+    grooveFallback: 'ride',
+    groovePool: GENRE_GROOVE_LIBRARY.jazz,
+    fills: {
+      basic: {
+        '1bar': [3, 5, 9, 13, 16, 17, 20, 27],
+        half: [2, 4, 7, 10, 17, 18, 20, 25],
+        quarter: [2, 6, 7, 8, 16, 18, 21, 27],
+      },
+      random: {
+        '1bar': [2, 3, 5, 8, 9, 12, 13, 16, 17, 20, 23, 24, 27, 28],
+        half: [2, 4, 7, 8, 10, 12, 17, 18, 20, 22, 25, 26],
+        quarter: [2, 6, 7, 8, 10, 12, 16, 18, 19, 21, 22, 27],
+      },
+    },
+  },
+}
+
 const TOTAL_BARS_PER_PAGE = 16
 const CELL_SIZE = 4
 
@@ -698,12 +813,62 @@ function createFullPattern(noteType, difficulty, bars, orchestration, kickSettin
   }
 }
 
+function clonePattern(pattern) {
+  return {
+    accentRow: [...pattern.accentRow],
+    kickRow: [...pattern.kickRow],
+    stepsPerBar: pattern.stepsPerBar,
+    totalSteps: pattern.totalSteps,
+  }
+}
+
+function appendPattern(target, source) {
+  target.accentRow.push(...source.accentRow)
+  target.kickRow.push(...source.kickRow)
+  target.totalSteps += source.totalSteps
+}
+
+function createTwoBarAccentPattern(noteType, difficulty, orchestration, kickSetting) {
+  return createFullPattern(noteType, difficulty, 2, orchestration, kickSetting)
+}
+
+function createAccentPagePatterns(noteType, difficulty, fixedBars, orchestration, kickSetting) {
+  const normalizedFixedBars = Math.max(2, Number(fixedBars) || 16)
+  const fixedBlockBars = Math.min(TOTAL_BARS_PER_PAGE, normalizedFixedBars)
+  const stepsPerBar = getStepsPerBar(noteType)
+  const repeatCountPerBlock = Math.max(1, fixedBlockBars / 2)
+  const fullPagePattern = {
+    accentRow: [],
+    kickRow: [],
+    stepsPerBar,
+    totalSteps: 0,
+  }
+
+  for (let blockStart = 0; blockStart < TOTAL_BARS_PER_PAGE; blockStart += fixedBlockBars) {
+    const seedPattern = createTwoBarAccentPattern(noteType, difficulty, orchestration, kickSetting)
+    for (let repeatIndex = 0; repeatIndex < repeatCountPerBlock; repeatIndex += 1) {
+      appendPattern(fullPagePattern, clonePattern(seedPattern))
+    }
+  }
+
+  const barsPerRow = 2
+  const rowTotalSteps = barsPerRow * stepsPerBar
+  const rowCount = TOTAL_BARS_PER_PAGE / barsPerRow
+
+  return Array.from({ length: rowCount }, (_, index) => {
+    const start = index * rowTotalSteps
+    const end = start + rowTotalSteps
+    return {
+      accentRow: fullPagePattern.accentRow.slice(start, end),
+      kickRow: fullPagePattern.kickRow.slice(start, end),
+      stepsPerBar,
+      totalSteps: rowTotalSteps,
+    }
+  })
+}
+
 function createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting) {
-  const barsPerRow = Number(bars)
-  const rowCount = Math.max(1, Math.floor(TOTAL_BARS_PER_PAGE / barsPerRow))
-  return Array.from({ length: rowCount }, () =>
-    createFullPattern(noteType, difficulty, bars, orchestration, kickSetting)
-  )
+  return createAccentPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
 }
 
 function randomPick(list) {
@@ -754,7 +919,33 @@ function addCrashToPhraseStart(pattern) {
   }
 }
 
-function getFillLibrary(fillLengthMode, fillPatternMode) {
+function getBaseFillCollection(fillLengthMode) {
+  if (fillLengthMode === '1bar') return ONE_BAR_FILLS
+  if (fillLengthMode === 'half') return HALF_BAR_FILLS
+  return QUARTER_BAR_FILLS
+}
+
+function getGenreProfile(fillGenre) {
+  return FILL_GENRE_PROFILES[fillGenre] || FILL_GENRE_PROFILES.rock
+}
+
+function getGenreGroovePool(fillGenre, grooveKey) {
+  const genreProfile = getGenreProfile(fillGenre)
+  if (grooveKey === 'random') return genreProfile.groovePool
+  if (grooveKey === 'straight') return GENRE_GROOVE_LIBRARY[fillGenre] || genreProfile.groovePool
+  return BASIC_EIGHT_BEAT_LIBRARY[grooveKey] || genreProfile.groovePool
+}
+
+function getFillLibrary(fillGenre, fillLengthMode, fillPatternMode) {
+  const genreProfile = getGenreProfile(fillGenre)
+  const fillIndexes = genreProfile.fills[fillPatternMode]?.[fillLengthMode] || []
+  const source = getBaseFillCollection(fillLengthMode)
+  const selected = fillIndexes
+    .map((index) => source[index])
+    .filter(Boolean)
+
+  if (selected.length) return selected
+
   if (fillLengthMode === '1bar') {
     return fillPatternMode === 'basic' ? BASIC_ONE_BAR_FILLS : ONE_BAR_FILLS
   }
@@ -764,19 +955,10 @@ function getFillLibrary(fillLengthMode, fillPatternMode) {
   return fillPatternMode === 'basic' ? BASIC_QUARTER_BAR_FILLS : QUARTER_BAR_FILLS
 }
 
-function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat) {
-  const groovePool = (() => {
-    if (grooveKey === 'random') {
-      return [
-        ...BASIC_EIGHT_BEAT_LIBRARY.straight,
-        ...BASIC_EIGHT_BEAT_LIBRARY.syncopated,
-        ...BASIC_EIGHT_BEAT_LIBRARY.ride,
-      ]
-    }
-    return BASIC_EIGHT_BEAT_LIBRARY[grooveKey] || BASIC_EIGHT_BEAT_LIBRARY.straight
-  })()
+function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat) {
+  const groovePool = getGenreGroovePool(fillGenre, grooveKey)
   const selectedGroove = randomPick(groovePool)
-  const fillPool = getFillLibrary(fillLengthMode, fillPatternMode)
+  const fillPool = getFillLibrary(fillGenre, fillLengthMode, fillPatternMode)
 
   let accentRow = Array(64).fill('')
   const kickRow = Array(64).fill('')
@@ -834,12 +1016,12 @@ function createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode, allo
   }
 }
 
-function createFillInPracticePatterns(grooveKey, fillLengthMode, fillPatternMode, barCount, allowOpenHiHat) {
+function createFillInPracticePatterns(fillGenre, grooveKey, fillLengthMode, fillPatternMode, barCount, allowOpenHiHat) {
   const phraseCount = Math.max(1, Number(barCount) / 4)
   const phrases = []
 
   for (let index = 0; index < phraseCount; index += 1) {
-    let phrase = createSingleFillPhrase(grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat)
+    let phrase = createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat)
     const previousPhrase = phrases[index - 1]
     if (previousPhrase?.needsNextCrash) {
       phrase = addCrashToPhraseStart(phrase)
@@ -970,14 +1152,16 @@ export default function App() {
   const [practiceMode, setPracticeMode] = useState('accent')
   const [noteType, setNoteType] = useState('8th')
   const [difficulty, setDifficulty] = useState('easy')
-  const [bars, setBars] = useState('2')
+  const [bars, setBars] = useState('16')
   const [orchestration, setOrchestration] = useState('none')
   const [kickSetting, setKickSetting] = useState('2')
   const [fillGroove, setFillGroove] = useState('random')
+  const [fillGenre, setFillGenre] = useState('rock')
   const [fillLengthMode, setFillLengthMode] = useState('1bar')
   const [fillPatternMode, setFillPatternMode] = useState('basic')
-  const [fillBarCount, setFillBarCount] = useState('4')
+  const [fillBarCount, setFillBarCount] = useState('32')
   const [fillOpenHiHat, setFillOpenHiHat] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [bpm, setBpm] = useState(90)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -994,8 +1178,8 @@ export default function App() {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
   const fillPatterns = useMemo(() => {
-    return createFillInPracticePatterns(fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat)
-  }, [fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey])
+    return createFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat)
+  }, [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey])
 
   const drumKitRef = useRef(null)
   const cymbalPlayerRef = useRef(null)
@@ -1013,6 +1197,7 @@ export default function App() {
   const snareLowPassRef = useRef(null)
   const snareCompressorRef = useRef(null)
   const playEventIdRef = useRef(null)
+  const playbackConfigRef = useRef(null)
   const samplesReady = kitReady && snareReady
 
   useEffect(() => {
@@ -1180,10 +1365,53 @@ export default function App() {
     Tone.Transport.bpm.value = bpm
   }, [bpm])
 
+  useEffect(() => {
+    const unlockFromGesture = () => {
+      unlockAudioContext()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        unlockAudioContext()
+      }
+    }
+
+    const handlePageShow = () => {
+      unlockAudioContext()
+    }
+
+    window.addEventListener('touchstart', unlockFromGesture, { passive: true })
+    window.addEventListener('pointerdown', unlockFromGesture, { passive: true })
+    window.addEventListener('click', unlockFromGesture, { passive: true })
+    window.addEventListener('pageshow', handlePageShow)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('touchstart', unlockFromGesture)
+      window.removeEventListener('pointerdown', unlockFromGesture)
+      window.removeEventListener('click', unlockFromGesture)
+      window.removeEventListener('pageshow', handlePageShow)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
   const getStepDuration = () => {
     if (noteType === '4th') return '4n'
     if (noteType === '8th') return '8n'
     return '16n'
+  }
+
+  const stopAllAudio = () => {
+    Tone.Transport.stop()
+    Tone.Transport.cancel()
+    playEventIdRef.current = null
+    drumKitRef.current?.stopAll?.()
+    cymbalPlayerRef.current?.stop()
+    Object.values(snarePlayersRef.current).flat().forEach((player) => {
+      player?.stop()
+    })
+    setCurrentPlaybackStep(null)
+    setIsPlaying(false)
   }
 
   const triggerSnare = (kind, time) => {
@@ -1198,7 +1426,7 @@ export default function App() {
   const handlePlay = async () => {
     if (!samplesReady) return
 
-    await Tone.start()
+    await unlockAudioContext()
     setCurrentPlaybackStep(null)
 
     const mergedPattern =
@@ -1224,8 +1452,7 @@ export default function App() {
 
     const stepDuration = practiceMode === 'fillin' ? '16n' : getStepDuration()
 
-    Tone.Transport.stop()
-    Tone.Transport.cancel()
+    stopAllAudio()
 
     let stepIndex = 0
 
@@ -1333,13 +1560,10 @@ export default function App() {
       stepIndex += 1
 
       if (stepIndex >= accentRow.length) {
-        Tone.Transport.stop()
-        Tone.Transport.cancel()
-        playEventIdRef.current = null
+        stopAllAudio()
         Tone.Draw.schedule(() => {
           setCurrentPlaybackStep(null)
         }, time)
-        setIsPlaying(false)
       }
     }, stepDuration)
 
@@ -1348,12 +1572,65 @@ export default function App() {
   }
 
   const handleStop = () => {
-    Tone.Transport.stop()
-    Tone.Transport.cancel()
-    playEventIdRef.current = null
-    setCurrentPlaybackStep(null)
-    setIsPlaying(false)
+    stopAllAudio()
   }
+
+  useEffect(() => {
+    const nextConfig = JSON.stringify({
+      practiceMode,
+      noteType,
+      difficulty,
+      bars,
+      orchestration,
+      kickSetting,
+      fillGenre,
+      fillGroove,
+      fillLengthMode,
+      fillPatternMode,
+      fillBarCount,
+      fillOpenHiHat,
+      kitLibrary,
+      snareTone,
+      tomTone,
+      floorTomTone,
+      cymbalTone,
+      bpm,
+    })
+
+    if (playbackConfigRef.current == null) {
+      playbackConfigRef.current = nextConfig
+      return
+    }
+
+    if (playbackConfigRef.current !== nextConfig) {
+      playbackConfigRef.current = nextConfig
+      if (isPlaying) stopAllAudio()
+    }
+  }, [
+    practiceMode,
+    noteType,
+    difficulty,
+    bars,
+    orchestration,
+    kickSetting,
+    fillGenre,
+    fillGroove,
+    fillLengthMode,
+    fillPatternMode,
+    fillBarCount,
+    fillOpenHiHat,
+    kitLibrary,
+    snareTone,
+    tomTone,
+    floorTomTone,
+    cymbalTone,
+    bpm,
+    isPlaying,
+  ])
+
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [practiceMode])
 
   const activePatternOffsets = useMemo(() => {
     let offset = 0
@@ -1373,197 +1650,243 @@ export default function App() {
     })
   }, [fillPatterns])
 
+  const practiceMenuButtons = PRACTICE_MENU.map((item) => (
+    <button
+      key={item.value}
+      className={`practice-tab ${practiceMode === item.value ? 'is-active' : ''}`}
+      onClick={() => {
+        setPracticeMode(item.value)
+        setIsMenuOpen(false)
+      }}
+    >
+      {item.label}
+    </button>
+  ))
+
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>ドラム練習パターンメーカー</h1>
-        <nav className="practice-nav no-print">
-          {PRACTICE_MENU.map((item) => (
-            <button
-              key={item.value}
-              className={`practice-tab ${practiceMode === item.value ? 'is-active' : ''}`}
-              onClick={() => setPracticeMode(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
+      <header className="site-header no-print">
+        <div className="brand-lockup">
+          <img src="/drumpattern_logo.svg" alt="Drum Pattern Maker" className="brand-logo" />
+          <div className="brand-text">
+            <p className="brand-eyebrow">Digital Practice Studio</p>
+            <h1>Drum Pattern Maker</h1>
+          </div>
+        </div>
+
+        <nav className="practice-nav desktop-nav">
+          {practiceMenuButtons}
         </nav>
+
+        <button
+          className={`menu-toggle ${isMenuOpen ? 'is-open' : ''}`}
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+          aria-label="メニューを開く"
+          aria-expanded={isMenuOpen}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </header>
 
-      <section className="control-panel no-print">
-        {practiceMode === 'accent' ? (
-          <>
-            <div className="control-item">
-              <label>音符パターン</label>
-              <select value={noteType} onChange={(e) => setNoteType(e.target.value)}>
-                {NOTE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+      <div className="app-backdrop" />
+
+      <div className="workspace">
+        <aside className={`settings-panel no-print ${isMenuOpen ? 'is-open' : ''}`}>
+          <div className="panel-scroll">
+            <div className="mobile-practice-nav">
+              {practiceMenuButtons}
             </div>
 
-            <div className="control-item">
-              <label>難易度</label>
-              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-                {DIFFICULTY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+            <div className="panel-intro">
+              <p className="panel-kicker">{practiceMode === 'accent' ? 'Accent Lab' : 'Fill Lab'}</p>
+              <h2>{practiceMode === 'accent' ? 'アクセント練習を組み立てる' : 'フィルイン練習をデザインする'}</h2>
+              <p>音価、ジャンル、音色を調整して、印刷しやすいドラム譜へ整えます。</p>
             </div>
 
-            <div className="control-item">
-              <label>固定小節</label>
-              <select value={bars} onChange={(e) => setBars(e.target.value)}>
-                {BAR_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+            <section className="control-panel">
+              {practiceMode === 'accent' ? (
+                <>
+                  <div className="control-item">
+                    <label>音符パターン</label>
+                    <select value={noteType} onChange={(e) => setNoteType(e.target.value)}>
+                      {NOTE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item">
-              <label>タム・シンバル構成</label>
-              <select value={orchestration} onChange={(e) => setOrchestration(e.target.value)}>
-                {ORCHESTRATION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+                  <div className="control-item">
+                    <label>難易度</label>
+                    <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                      {DIFFICULTY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item">
-              <label>キック設定</label>
-              <select value={kickSetting} onChange={(e) => setKickSetting(e.target.value)}>
-                {KICK_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="control-item">
-              <label>基本8ビート</label>
-              <select value={fillGroove} onChange={(e) => setFillGroove(e.target.value)}>
-                {FILL_GROOVE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+                  <div className="control-item">
+                    <label>固定小節</label>
+                    <select value={bars} onChange={(e) => setBars(e.target.value)}>
+                      {BAR_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item">
-              <label>フィル長</label>
-              <select value={fillLengthMode} onChange={(e) => setFillLengthMode(e.target.value)}>
-                {FILL_LENGTH_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+                  <div className="control-item">
+                    <label>タム・シンバル構成</label>
+                    <select value={orchestration} onChange={(e) => setOrchestration(e.target.value)}>
+                      {ORCHESTRATION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item">
-              <label>フィルパターン</label>
-              <select value={fillPatternMode} onChange={(e) => setFillPatternMode(e.target.value)}>
-                {FILL_PATTERN_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+                  <div className="control-item">
+                    <label>キック設定</label>
+                    <select value={kickSetting} onChange={(e) => setKickSetting(e.target.value)}>
+                      {KICK_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="control-item">
+                    <label>ジャンル</label>
+                    <select value={fillGenre} onChange={(e) => setFillGenre(e.target.value)}>
+                      {FILL_GENRE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item">
-              <label>生成小節数</label>
-              <select value={fillBarCount} onChange={(e) => setFillBarCount(e.target.value)}>
-                {FILL_BAR_COUNT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+                  <div className="control-item">
+                    <label>基本8ビート</label>
+                    <select value={fillGroove} onChange={(e) => setFillGroove(e.target.value)}>
+                      {FILL_GROOVE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item">
-              <label>固定表示</label>
-              <select value={fillBarCount} disabled>
-                <option value={fillBarCount}>{fillBarCount}小節固定</option>
-              </select>
-            </div>
+                  <div className="control-item">
+                    <label>フィル長</label>
+                    <select value={fillLengthMode} onChange={(e) => setFillLengthMode(e.target.value)}>
+                      {FILL_LENGTH_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="control-item control-item-checkbox">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={fillOpenHiHat}
-                  onChange={(e) => setFillOpenHiHat(e.target.checked)}
-                />
-                ハイハットオープン
-              </label>
-            </div>
-          </>
-        )}
+                  <div className="control-item">
+                    <label>フィルパターン</label>
+                    <select value={fillPatternMode} onChange={(e) => setFillPatternMode(e.target.value)}>
+                      {FILL_PATTERN_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-        <div className="control-item">
-          <label>音源ライブラリ</label>
-          <select value={kitLibrary} onChange={(e) => setKitLibrary(e.target.value)}>
-            {KIT_LIBRARY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+                  <div className="control-item">
+                    <label>生成小節数</label>
+                    <select value={fillBarCount} onChange={(e) => setFillBarCount(e.target.value)}>
+                      {FILL_BAR_COUNT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-        <div className="control-item">
-          <label>スネア音色</label>
-          <select value={snareTone} onChange={(e) => setSnareTone(e.target.value)}>
-            {SNARE_TONE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+                  <div className="control-item control-item-checkbox">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={fillOpenHiHat}
+                        onChange={(e) => setFillOpenHiHat(e.target.checked)}
+                      />
+                      ハイハットオープン
+                    </label>
+                  </div>
+                </>
+              )}
 
-        <div className="control-item">
-          <label>タム音色</label>
-          <select value={tomTone} onChange={(e) => setTomTone(e.target.value)}>
-            {TOM_TONE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+              <div className="control-item">
+                <label>音源ライブラリ</label>
+                <select value={kitLibrary} onChange={(e) => setKitLibrary(e.target.value)}>
+                  {KIT_LIBRARY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
 
-        <div className="control-item">
-          <label>フロアタム音色</label>
-          <select value={floorTomTone} onChange={(e) => setFloorTomTone(e.target.value)}>
-            {FLOOR_TOM_TONE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+              <div className="control-item">
+                <label>スネア音色</label>
+                <select value={snareTone} onChange={(e) => setSnareTone(e.target.value)}>
+                  {SNARE_TONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
 
-        <div className="control-item">
-          <label>シンバル音色</label>
-          <select value={cymbalTone} onChange={(e) => setCymbalTone(e.target.value)}>
-            {CYMBAL_TONE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-      </section>
+              <div className="control-item">
+                <label>タム音色</label>
+                <select value={tomTone} onChange={(e) => setTomTone(e.target.value)}>
+                  {TOM_TONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
 
-      <section className="button-row no-print">
-        <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
-        <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
-        <button onClick={handlePlay} disabled={isPlaying || !samplesReady}>再生</button>
-        <button onClick={handleStop} disabled={!isPlaying}>停止</button>
+              <div className="control-item">
+                <label>フロアタム音色</label>
+                <select value={floorTomTone} onChange={(e) => setFloorTomTone(e.target.value)}>
+                  {FLOOR_TOM_TONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
 
-        <label className="bpm-control">
-          BPM
-          <input
-            type="number"
-            min="40"
-            max="240"
-            value={bpm}
-            onChange={(e) => setBpm(Number(e.target.value))}
-          />
-        </label>
+              <div className="control-item">
+                <label>シンバル音色</label>
+                <select value={cymbalTone} onChange={(e) => setCymbalTone(e.target.value)}>
+                  {CYMBAL_TONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+            </section>
 
-        <button onClick={() => window.print()}>印刷 / PDF保存</button>
-      </section>
+            <section className="action-panel">
+              <div className="button-row">
+                <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
+                <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
+                <button onClick={handlePlay} disabled={isPlaying || !samplesReady}>再生</button>
+                <button onClick={handleStop} disabled={!isPlaying}>停止</button>
+              </div>
 
-      <section className="sheet-area">
-        <div className="sheet-paper">
+              <div className="utility-row">
+                <label className="bpm-control">
+                  <span>BPM</span>
+                  <input
+                    type="number"
+                    min="40"
+                    max="240"
+                    value={bpm}
+                    onChange={(e) => setBpm(Number(e.target.value))}
+                  />
+                </label>
+
+                <button className="ghost-button" onClick={() => window.print()}>印刷 / PDF保存</button>
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <section className="sheet-area">
+          <div className="sheet-paper">
           <div className="sheet-meta">
             {practiceMode === 'accent' ? (
               <>
@@ -1576,20 +1899,18 @@ export default function App() {
             ) : (
               <>
                 <div>モード: フィルイン練習</div>
+                <div>ジャンル: {FILL_GENRE_OPTIONS.find((item) => item.value === fillGenre)?.label}</div>
                 <div>基本ビート: {FILL_GROOVE_OPTIONS.find((item) => item.value === fillGroove)?.label}</div>
                 <div>フィル長: {FILL_LENGTH_OPTIONS.find((item) => item.value === fillLengthMode)?.label}</div>
                 <div>フィルパターン: {FILL_PATTERN_OPTIONS.find((item) => item.value === fillPatternMode)?.label}</div>
-                <div>表示: {fillBarCount}小節固定</div>
+                <div>生成小節数: {FILL_BAR_COUNT_OPTIONS.find((item) => item.value === fillBarCount)?.label}</div>
                 <div>ハイハットオープン: {fillOpenHiHat ? 'あり' : 'なし'}</div>
               </>
             )}
-            <div>音源: {KIT_LIBRARY_META[kitLibrary].label}</div>
-            <div>ライセンス: {KIT_LIBRARY_META[kitLibrary].license}</div>
-            <div>出典: {KIT_LIBRARY_META[kitLibrary].source}</div>
           </div>
 
           <div className="abc-section">
-            <h2>SVGプレビュー</h2>
+            <h2>{practiceMode === 'accent' ? 'Accent Score' : 'Fill-In Score'}</h2>
             <div className="svg-preview-list">
               {practiceMode === 'accent' ? (
                 patterns.map((pattern, index) => (
@@ -1619,8 +1940,9 @@ export default function App() {
             </div>
           </div>
 
-        </div>
-      </section>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

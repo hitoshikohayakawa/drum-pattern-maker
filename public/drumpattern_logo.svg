@@ -1,0 +1,38 @@
+<svg width="1040" height="320" viewBox="0 0 1040 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1040" height="320" rx="28" fill="white" fill-opacity="0.02"/>
+  <g transform="translate(20,28)">
+    <ellipse cx="144" cy="110" rx="108" ry="38" stroke="#F6FBFF" stroke-width="10"/>
+    <rect x="42" y="110" width="204" height="78" rx="10" fill="#F6FBFF"/>
+    <rect x="54" y="118" width="180" height="54" rx="6" fill="#09111F"/>
+    <path d="M38 102C38 74 82 54 144 54C206 54 250 74 250 102" stroke="#F6FBFF" stroke-width="10" stroke-linecap="round"/>
+    <g stroke="#F6FBFF" stroke-width="8" stroke-linecap="round">
+      <line x1="72" y1="108" x2="72" y2="186"/>
+      <line x1="106" y1="108" x2="106" y2="186"/>
+      <line x1="144" y1="108" x2="144" y2="186"/>
+      <line x1="182" y1="108" x2="182" y2="186"/>
+      <line x1="216" y1="108" x2="216" y2="186"/>
+    </g>
+    <g fill="#F6FBFF">
+      <circle cx="52" cy="148" r="8"/>
+      <circle cx="72" cy="186" r="8"/>
+      <circle cx="106" cy="186" r="8"/>
+      <circle cx="144" cy="186" r="8"/>
+      <circle cx="182" cy="186" r="8"/>
+      <circle cx="216" cy="186" r="8"/>
+      <circle cx="236" cy="148" r="8"/>
+      <circle cx="72" cy="108" r="8"/>
+      <circle cx="106" cy="108" r="8"/>
+      <circle cx="144" cy="108" r="8"/>
+      <circle cx="182" cy="108" r="8"/>
+      <circle cx="216" cy="108" r="8"/>
+    </g>
+    <g stroke="#F6FBFF" stroke-width="12" stroke-linecap="round">
+      <line x1="52" y1="20" x2="234" y2="78"/>
+      <line x1="246" y1="22" x2="102" y2="82"/>
+    </g>
+  </g>
+  <g fill="#F6FBFF">
+    <text x="340" y="166" font-size="156" font-weight="700" font-family="Georgia, 'Times New Roman', serif">DPM</text>
+    <text x="80" y="286" font-size="92" font-style="italic" font-family="'Snell Roundhand', 'Times New Roman', serif">Drum Pattern Maker</text>
+  </g>
+</svg>

@@ -46,26 +46,36 @@ export default function SvgNotationPreview({
   const { accentRow = [], kickRow = [], totalSteps = 0, stepsPerBar = 0 } = pattern
   if (!totalSteps || !stepsPerBar) return <div className="abc-preview">プレビュー対象がありません</div>
 
-  const rowLeft = 120
-  const rowTop = 42
-  const stepX = 38
-  const width = rowLeft + totalSteps * stepX + 60
-  const height = 190
-  const lineYs = Array.from({ length: 5 }, (_, i) => rowTop + i * 14)
+  const isAccentMode = mode === 'accent'
+  const rowLeft = isAccentMode ? 92 : 102
+  const rowTop = isAccentMode ? 24 : 30
+  const lineGap = isAccentMode ? 10 : 11
+  const contentWidth = isAccentMode ? 1080 : 1180
+  const stepX = totalSteps > 1 ? contentWidth / totalSteps : contentWidth
+  const width = rowLeft + contentWidth + 44
+  const height = isAccentMode ? 118 : 138
+  const lineYs = Array.from({ length: 5 }, (_, i) => rowTop + i * lineGap)
   const snareY = (lineYs[1] + lineYs[2]) / 2
   const tomY = lineYs[1]
   const floorTomY = lineYs[4]
-  const bassDrumY = lineYs[4] + 18
-  const beamTop = rowTop - 10
+  const bassDrumY = lineYs[4] + (isAccentMode ? 16 : 18)
+  const beamTop = rowTop - (isAccentMode ? 8 : 10)
   const beamThickness = 3
-  const secondaryBeamOffset = 10
-  const accentY = rowTop - 8
+  const secondaryBeamOffset = isAccentMode ? 8 : 10
   const activeColor = '#9acd32'
 
   const beamLevel = getBeamLevel(noteType)
   const groupSize = getGroupSize(noteType)
+  const noteHeadRx = mode === 'accent' ? 6.6 : 7.2
+  const noteHeadRy = mode === 'accent' ? 5.2 : 5.8
+  const kickHeadRx = mode === 'accent' ? 6.8 : 7.4
+  const kickHeadRy = mode === 'accent' ? 5.5 : 6.1
+  const stemOffsetX = noteHeadRx - 0.8
+  const hiHatY = lineYs[0] - 1
+  const hiHatStemTopY = hiHatY - 14
+  const openHiHatCircleY = hiHatY - 20
 
-  const positions = Array.from({ length: totalSteps }, (_, i) => rowLeft + i * stepX)
+  const positions = Array.from({ length: totalSteps }, (_, i) => rowLeft + i * stepX + stepX / 2)
 
   function normalizeSymbol(symbol) {
     if (orchestration === 'tom' && symbol === '✕') return '△'
@@ -209,42 +219,62 @@ export default function SvgNotationPreview({
           const hasOpenHiHatLayer = symbol === 'O' || hasLayer(symbol, 'O')
           const hasRideLayer = hasLayer(symbol, 'R')
           const hasSnareLayer = symbol === 'S' || symbol === '＜' || hasLayer(symbol, 'S')
+          const hasUpperLayer = hasHiHatLayer || hasOpenHiHatLayer || hasRideLayer
+          const needsSharedStem = hasSnareLayer && hasUpperLayer
+          const isStandaloneCymbal = symbol === '✕' || symbol === 'C'
           const drawHandNote = mode === 'accent' || Boolean(symbol)
           const isBeamed = beamedIndexes.has(index)
           const isActiveStep = activeStepIndex === index
           const stemEndY = isBeamed
             ? beamTop + (beamLevel > 1 ? secondaryBeamOffset + beamThickness : beamThickness)
             : handY - 40
+          const accentMarkY = Math.min(handY - (noteType === '4th' ? 24 : 16), lineYs[0] - 10)
           const noteColor = isActiveStep ? activeColor : '#111'
 
           return (
             <g key={`note-${index}`}>
               {drawHandNote ? (
                 <>
-                  <line x1={x + 8} y1={handY - 2} x2={x + 8} y2={stemEndY} stroke={noteColor} strokeWidth="2.8" />
-                  {isCymbal ? (
+                  {!isStandaloneCymbal && (!hasUpperLayer || needsSharedStem) ? (
+                    <line x1={x + stemOffsetX} y1={handY - 1.5} x2={x + stemOffsetX} y2={stemEndY} stroke={noteColor} strokeWidth="2.8" />
+                  ) : null}
+                  {isStandaloneCymbal ? (
                     <g>
+                      <line x1={x} y1={handY - 1} x2={x} y2={handY - 16} stroke={noteColor} strokeWidth="2.2" />
                       <line x1={x - 6.5} y1={handY - 5.5} x2={x + 6.5} y2={handY + 5.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                       <line x1={x + 6.5} y1={handY - 5.5} x2={x - 6.5} y2={handY + 5.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                     </g>
                   ) : null}
                   {hasHiHatLayer || hasOpenHiHatLayer ? (
                     <g>
-                      <line x1={x - 6.5} y1={lineYs[0] - 11.5} x2={x + 6.5} y2={lineYs[0] - 0.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1={x + 6.5} y1={lineYs[0] - 11.5} x2={x - 6.5} y2={lineYs[0] - 0.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      {!needsSharedStem ? (
+                        <line x1={x} y1={hiHatY - 1} x2={x} y2={hiHatStemTopY} stroke={noteColor} strokeWidth="2.2" />
+                      ) : null}
+                      <line x1={x - 6.5} y1={hiHatY - 5.5} x2={x + 6.5} y2={hiHatY + 5.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={hiHatY - 5.5} x2={x - 6.5} y2={hiHatY + 5.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                       {hasOpenHiHatLayer ? (
-                        <circle cx={x} cy={lineYs[0] - 18} r="4.5" fill="none" stroke={noteColor} strokeWidth="1.5" />
+                        <circle cx={x} cy={openHiHatCircleY} r="4.5" fill="none" stroke={noteColor} strokeWidth="1.5" />
                       ) : null}
                     </g>
                   ) : null}
                   {hasRideLayer ? (
                     <g>
-                      <line x1={x - 6.5} y1={lineYs[1] - 15.5} x2={x + 6.5} y2={lineYs[1] - 4.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1={x + 6.5} y1={lineYs[1] - 15.5} x2={x - 6.5} y2={lineYs[1] - 4.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      {!needsSharedStem ? (
+                        <line x1={x} y1={lineYs[1] - 9} x2={x} y2={lineYs[1] - 23} stroke={noteColor} strokeWidth="2.2" />
+                      ) : null}
+                      <line x1={x - 6.5} y1={lineYs[1] - 14.5} x2={x + 6.5} y2={lineYs[1] - 3.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1={x + 6.5} y1={lineYs[1] - 14.5} x2={x - 6.5} y2={lineYs[1] - 3.5} stroke={noteColor} strokeWidth="2.2" strokeLinecap="round" />
                     </g>
                   ) : null}
                   {(!isCymbal && !hasHiHatLayer && !hasOpenHiHatLayer && !hasRideLayer) || hasSnareLayer ? (
-                    <ellipse cx={x} cy={handY} rx="9.5" ry="7.5" fill={noteColor} transform={`rotate(-18 ${x} ${handY})`} />
+                    <ellipse
+                      cx={x}
+                      cy={handY}
+                      rx={noteHeadRx}
+                      ry={noteHeadRy}
+                      fill={noteColor}
+                      transform={`rotate(-18 ${x} ${handY})`}
+                    />
                   ) : null}
                 </>
               ) : null}
@@ -253,15 +283,15 @@ export default function SvgNotationPreview({
                 <ellipse
                   cx={x - 1}
                   cy={bassDrumY}
-                  rx="10.5"
-                  ry="8.5"
+                  rx={kickHeadRx}
+                  ry={kickHeadRy}
                   fill={noteColor}
                   transform={`rotate(-18 ${x - 1} ${bassDrumY})`}
                 />
               ) : null}
 
               {showAccentMarks && symbol ? (
-                <text x={x + 1} y={accentY} fontSize="22" fontWeight="600" textAnchor="middle">{'>'}</text>
+                <text x={x + 1} y={accentMarkY} fontSize="22" fontWeight="600" textAnchor="middle">{'>'}</text>
               ) : null}
             </g>
           )

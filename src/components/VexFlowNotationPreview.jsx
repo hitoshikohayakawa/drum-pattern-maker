@@ -14,46 +14,31 @@ function getStepCountForBar(noteType, mode) {
   return 16
 }
 
-function getAccentChord(symbol) {
-  if (symbol === '✕') return ['g/5/cx']
-  if (symbol === '△') return ['e/5']
-  if (symbol === '▲') return ['b/4']
-  return ['c/5']
-}
+function getVoice1Keys(symbol, mode) {
+  const keys = []
+  const str = String(symbol || '')
+  
+  if (str.includes('✕') || str.includes('C')) keys.push('g/5/cx') // Crash/Cymbal
+  if (str.includes('H') || str.includes('O')) keys.push('g/5/x2') // Hihat
+  if (str.includes('R')) keys.push('f/5/x2') // Ride
+  if (str.includes('S') || str.includes('＜')) keys.push('c/5') // Snare
+  if (str.includes('T') || str.includes('△')) keys.push('e/5') // Tom
+  if (str.includes('M')) keys.push('d/5') // Mid Tom
+  if (str.includes('F') || str.includes('▲')) keys.push('a/4') // Floor Tom
 
-function getUpperFillChord(symbol) {
-  if (!symbol) return null
-  if (symbol === '✕' || symbol === 'C' || symbol === 'R') return ['g/5/cx']
-  if (symbol === 'H' || symbol === 'O') return ['g/5/x2']
-
-  if (typeof symbol === 'string') {
-    if (symbol.includes('R')) return ['g/5/cx']
-    if (symbol.includes('C') || symbol.includes('✕')) return ['g/5/cx']
-    if (symbol.includes('H') || symbol.includes('O')) return ['g/5/x2']
+  if (keys.length === 0 && mode === 'accent') {
+    keys.push('c/5') // アクセント練習モードの空枠はゴーストスネアとして扱う
   }
 
-  return null
+  return [...new Set(keys)]
 }
 
-function getLowerFillChord(symbol, hasKick = false) {
+function getVoice2Keys(symbol) {
+  if (!symbol) return []
+  const str = String(symbol)
   const keys = []
-  const normalized = typeof symbol === 'string' ? symbol : ''
-
-  if (normalized === 'S' || normalized === '＜') keys.push('c/5')
-  if (normalized === 'T' || normalized === '△') keys.push('e/5')
-  if (normalized === 'M') keys.push('d/5')
-  if (normalized === 'F' || normalized === '▲') keys.push('b/4')
-
-  if (normalized.includes('S')) keys.push('c/5')
-  if (normalized.includes('T')) keys.push('e/5')
-  if (normalized.includes('M')) keys.push('d/5')
-  if (normalized.includes('F')) keys.push('b/4')
-  if (normalized.includes('△')) keys.push('e/5')
-  if (normalized.includes('▲')) keys.push('b/4')
-
-  if (hasKick) keys.push('f/4')
-
-  return [...new Set(keys)]
+  if (str.includes('●')) keys.push('f/4') // Kick
+  return keys
 }
 
 function createGhostNote(vexflow, duration) {
@@ -61,61 +46,61 @@ function createGhostNote(vexflow, duration) {
   return new GhostNote({ duration })
 }
 
-function applyStemTuning(note, stemDirection, stemLength = 30) {
-  note.setStemDirection(stemDirection)
-  if (typeof note.setStemLength === 'function') {
-    note.setStemLength(stemLength)
+function getDurationForSpan(baseDuration, span) {
+  if (baseDuration === '16') {
+    if (span === 4) return '4'
+    if (span === 2) return '8'
+    return '16'
   }
-  return note
+  if (baseDuration === '8') {
+    if (span === 2) return '4'
+    return '8'
+  }
+  return '4'
 }
 
-function isUpperSymbolFilled(symbol) {
-  return Boolean(getUpperFillChord(symbol))
+function getSpanCandidates(baseDuration) {
+  if (baseDuration === '16') return [4, 2, 1]
+  if (baseDuration === '8') return [2, 1]
+  return [1]
 }
 
-function getActiveWithinSpan(activeStepIndex, startIndex, span) {
-  if (activeStepIndex == null) return false
-  return activeStepIndex >= startIndex && activeStepIndex < startIndex + span
-}
-
-function getLargestSpan(startIndex, barStartIndex, maxSpanSteps, slots, isFilled) {
+function getLargestSpan(startIndex, barStartIndex, maxSpanSteps, slots, getKeys, baseDuration) {
   const offsetInBar = startIndex - barStartIndex
-  const candidates = [
-    { span: 4, duration: '4' },
-    { span: 2, duration: '8' },
-    { span: 1, duration: '16' },
-  ]
+  const candidates = getSpanCandidates(baseDuration)
 
-  for (const candidate of candidates) {
-    if (candidate.span > maxSpanSteps) continue
-    if (offsetInBar % candidate.span !== 0) continue
+  for (const span of candidates) {
+    if (span > maxSpanSteps) continue
+    if (offsetInBar % span !== 0) continue
 
     let valid = true
-    for (let index = 1; index < candidate.span; index += 1) {
-      if (isFilled(slots[startIndex + index])) {
+    for (let index = 1; index < span; index += 1) {
+      if (getKeys(slots[startIndex + index]).length > 0) {
         valid = false
         break
       }
     }
 
-    if (valid) return candidate
+    if (valid) return { span, duration: getDurationForSpan(baseDuration, span) }
   }
 
-  return { span: 1, duration: '16' }
+  return { span: 1, duration: getDurationForSpan(baseDuration, 1) }
 }
 
-function buildCompactedVoice({
+function buildVoiceData({
   vexflow,
   slots,
   stepsPerBar,
   barCount,
   activeStepIndex,
-  isFilled,
-  createVisibleNote,
+  getKeys,
+  stemDirection,
+  baseDuration,
+  mode,
 }) {
   const tickables = []
   const beamGroups = Array.from({ length: barCount }, () => [])
-
+  
   for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
     const barStartIndex = barIndex * stepsPerBar
     const barEndIndex = barStartIndex + stepsPerBar
@@ -123,22 +108,47 @@ function buildCompactedVoice({
 
     while (stepIndex < barEndIndex) {
       const symbol = slots[stepIndex]
-      const filled = isFilled(symbol)
+      const keys = getKeys(symbol)
       const maxSpanSteps = barEndIndex - stepIndex
       const { span, duration } = getLargestSpan(
         stepIndex,
         barStartIndex,
         maxSpanSteps,
         slots,
-        isFilled
+        getKeys,
+        baseDuration
       )
 
-      if (filled) {
-        const note = createVisibleNote(
-          symbol,
+      if (keys.length > 0) {
+        const { StaveNote, Articulation, ModifierPosition } = vexflow
+        const note = new StaveNote({
+          keys,
           duration,
-          getActiveWithinSpan(activeStepIndex, stepIndex, span)
-        )
+          clef: 'percussion',
+          stem_direction: stemDirection
+        })
+
+        if (typeof note.setStemLength === 'function') {
+          note.setStemLength(24)
+        }
+
+        const isAct = activeStepIndex !== null && activeStepIndex >= stepIndex && activeStepIndex < stepIndex + span
+        if (isAct) {
+          note.setStyle({ fillStyle: '#9acd32', strokeStyle: '#9acd32' })
+        }
+
+        if (stemDirection === 1) {
+          const strSym = String(symbol || '')
+          // アクセント練習モードまたは通常の明示的なアクセント記号がある場合
+          const isAccent = strSym === '＜' || strSym.includes('＜')
+          if (isAccent) {
+            note.addModifier(new Articulation('a>').setPosition(ModifierPosition.ABOVE), 0)
+          }
+          if (strSym.includes('O')) {
+             note.addModifier(new Articulation('ah').setPosition(ModifierPosition.ABOVE), 0)
+          }
+        }
+
         tickables.push(note)
         beamGroups[barIndex].push(note)
       } else {
@@ -152,129 +162,6 @@ function buildCompactedVoice({
   return { tickables, beamGroups }
 }
 
-function getBeamGroupFractions(vexflow, noteType, mode) {
-  const { Fraction } = vexflow
-
-  if (mode === 'fillin') {
-    return [new Fraction(1, 4)]
-  }
-
-  if (noteType === '8th') {
-    return [new Fraction(1, 4)]
-  }
-
-  if (noteType === '16th') {
-    return [new Fraction(1, 4)]
-  }
-
-  return null
-}
-
-function createUpperNote(vexflow, symbol, duration, isActive) {
-  const { Articulation, ModifierPosition, StaveNote } = vexflow
-  const keys = getUpperFillChord(symbol)
-  if (!keys) return createGhostNote(vexflow, duration)
-
-  const note = applyStemTuning(new StaveNote({
-    keys,
-    duration,
-    clef: 'percussion',
-    stem_direction: 1,
-  }), 1, duration === '16' ? 26 : 30)
-
-  if (symbol === '＜') {
-    note.addModifier(new Articulation('a>').setPosition(ModifierPosition.ABOVE), 0)
-  }
-
-  if (symbol === 'O' || (typeof symbol === 'string' && symbol.includes('O'))) {
-    note.addModifier(new Articulation('ah').setPosition(ModifierPosition.ABOVE), 0)
-  }
-
-  if (isActive) {
-    note.setStyle({
-      fillStyle: '#9acd32',
-      strokeStyle: '#9acd32',
-    })
-  }
-
-  return note
-}
-
-function createLowerFillNote(vexflow, symbol, hasKick, duration, isActive) {
-  const { Articulation, ModifierPosition, StaveNote } = vexflow
-  const keys = getLowerFillChord(symbol, hasKick)
-  if (!keys.length) return createGhostNote(vexflow, duration)
-
-  const hasDrumHeadAboveKick = keys.some((key) => key !== 'f/4')
-  const stemDirection = hasDrumHeadAboveKick ? 1 : -1
-  const stemLength = duration === '16' ? 24 : 28
-
-  const note = applyStemTuning(new StaveNote({
-    keys,
-    duration,
-    clef: 'percussion',
-    stem_direction: stemDirection,
-  }), stemDirection, stemLength)
-
-  if (symbol === '＜' || (typeof symbol === 'string' && symbol.includes('＜'))) {
-    note.addModifier(new Articulation('a>').setPosition(ModifierPosition.ABOVE), 0)
-  }
-
-  if (isActive) {
-    note.setStyle({
-      fillStyle: '#9acd32',
-      strokeStyle: '#9acd32',
-    })
-  }
-
-  return note
-}
-
-function createAccentNote(vexflow, symbol, duration, isActive) {
-  const { Articulation, ModifierPosition, StaveNote } = vexflow
-  const normalizedSymbol = symbol || ''
-  const note = applyStemTuning(new StaveNote({
-    keys: getAccentChord(normalizedSymbol),
-    duration,
-    clef: 'percussion',
-    stem_direction: 1,
-  }), 1, duration === '16' ? 26 : 30)
-
-  if (normalizedSymbol) {
-    note.addModifier(new Articulation('a>').setPosition(ModifierPosition.ABOVE), 0)
-  }
-
-  if (isActive) {
-    note.setStyle({
-      fillStyle: '#9acd32',
-      strokeStyle: '#9acd32',
-    })
-  }
-
-  return note
-}
-
-function createKickNote(vexflow, hasKick, duration, isActive) {
-  const { StaveNote } = vexflow
-  if (!hasKick) return createGhostNote(vexflow, duration)
-
-  const note = applyStemTuning(new StaveNote({
-    keys: ['f/4'],
-    duration,
-    clef: 'percussion',
-    stem_direction: -1,
-  }), -1, duration === '16' ? 24 : 28)
-
-  if (hasKick && isActive) {
-    note.setStyle({
-      fillStyle: '#9acd32',
-      strokeStyle: '#9acd32',
-    })
-  }
-
-  return note
-}
-
 export default function VexFlowNotationPreview({
   pattern,
   noteType,
@@ -283,23 +170,6 @@ export default function VexFlowNotationPreview({
 }) {
   const containerRef = useRef(null)
   const [errorMessage, setErrorMessage] = useState('')
-  const [containerWidth, setContainerWidth] = useState(0)
-
-  useEffect(() => {
-    const node = containerRef.current
-    if (!node) return
-
-    const updateWidth = () => {
-      setContainerWidth(node.clientWidth || 0)
-    }
-
-    updateWidth()
-
-    const observer = new ResizeObserver(updateWidth)
-    observer.observe(node)
-
-    return () => observer.disconnect()
-  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -315,21 +185,25 @@ export default function VexFlowNotationPreview({
         const { loadBravura } = await import('../../vendor/vexflow/src/fonts/load_bravura.ts')
         if (cancelled || !containerRef.current) return
 
-        const { Beam, Flow, Formatter, Renderer, Stave, Voice } = vexflow
+        const { Beam, Flow, Formatter, Renderer, Stave, Voice, Fraction } = vexflow
         loadBravura()
         Flow.setMusicFont('Bravura')
 
-        const duration = getDurationCode(noteType, mode)
+        const baseDuration = getDurationCode(noteType, mode)
         const stepsPerBar = pattern.stepsPerBar || getStepCountForBar(noteType, mode)
         const totalSteps = pattern.totalSteps || stepsPerBar
         const accentRow = (pattern.accentRow || []).slice(0, totalSteps)
         const kickRow = (pattern.kickRow || []).slice(0, totalSteps)
         const barCount = Math.max(1, Math.ceil(totalSteps / stepsPerBar))
-        const width = Math.max(720, (containerWidth || 1120) - 8)
+
+        const minWidthPerBar = baseDuration === '16' ? 240 : 180
+        const minTotalWidth = barCount * minWidthPerBar + 40
+        const containerWidth = container.parentElement.clientWidth || 1120
+        const width = Math.max(minTotalWidth, containerWidth - 8)
+        
         const height = 164
         const staveWidth = width - 40
         const barWidth = staveWidth / barCount
-        const beamGroups = getBeamGroupFractions(vexflow, noteType, mode)
 
         const renderer = new Renderer(containerRef.current, Renderer.Backends.SVG)
         renderer.resize(width, height)
@@ -340,59 +214,39 @@ export default function VexFlowNotationPreview({
         stave.addClef('percussion').addTimeSignature('4/4')
         stave.setContext(context).draw()
 
-        const accentVoice =
-          mode === 'accent'
-            ? (() => {
-              const tickables = accentRow.map((symbol, index) =>
-                createAccentNote(vexflow, symbol || '', duration, activeStepIndex === index)
-              )
-              const beamGroups = Array.from({ length: barCount }, (_, barIndex) =>
-                tickables.slice(barIndex * stepsPerBar, (barIndex + 1) * stepsPerBar)
-              )
-              return { tickables, beamGroups }
-            })()
-            : buildCompactedVoice({
-              vexflow,
-              slots: accentRow,
-              stepsPerBar,
-              barCount,
-              activeStepIndex,
-              isFilled: isUpperSymbolFilled,
-              createVisibleNote: (symbol, noteDuration, isActive) =>
-                createUpperNote(vexflow, symbol || '', noteDuration, isActive),
-            })
+        const voice1Data = buildVoiceData({
+          vexflow,
+          slots: accentRow,
+          stepsPerBar,
+          barCount,
+          activeStepIndex,
+          getKeys: (sym) => getVoice1Keys(sym, mode),
+          stemDirection: 1,
+          baseDuration,
+          mode,
+        })
 
-        const lowerVoiceData =
-          mode === 'accent'
-            ? {
-              tickables: kickRow.map((symbol, index) =>
-                createKickNote(vexflow, Boolean(symbol), duration, activeStepIndex === index)
-              ),
-            }
-            : buildCompactedVoice({
-              vexflow,
-              slots: Array.from({ length: totalSteps }, (_, index) => ({
-                symbol: accentRow[index] || '',
-                hasKick: Boolean(kickRow[index]),
-              })),
-              stepsPerBar,
-              barCount,
-              activeStepIndex,
-              isFilled: (slot) => Boolean(getLowerFillChord(slot.symbol, slot.hasKick).length),
-              createVisibleNote: (slot, noteDuration, isActive) =>
-                createLowerFillNote(vexflow, slot.symbol, slot.hasKick, noteDuration, isActive),
-            })
+        const voice2Data = buildVoiceData({
+          vexflow,
+          slots: kickRow,
+          stepsPerBar,
+          barCount,
+          activeStepIndex,
+          getKeys: getVoice2Keys,
+          stemDirection: -1,
+          baseDuration,
+        })
 
-        const upperVoice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
-        const lowerVoice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
+        const voice1 = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
+        const voice2 = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT)
 
-        upperVoice.addTickables(accentVoice.tickables)
-        lowerVoice.addTickables(lowerVoiceData.tickables)
+        voice1.addTickables(voice1Data.tickables)
+        voice2.addTickables(voice2Data.tickables)
 
-        new Formatter().joinVoices([upperVoice, lowerVoice]).formatToStave([upperVoice, lowerVoice], stave)
+        new Formatter().joinVoices([voice1, voice2]).formatToStave([voice1, voice2], stave)
 
-        upperVoice.draw(context, stave)
-        lowerVoice.draw(context, stave)
+        voice1.draw(context, stave)
+        voice2.draw(context, stave)
 
         for (let barIndex = 1; barIndex < barCount; barIndex += 1) {
           const x = 20 + barWidth * barIndex
@@ -402,30 +256,29 @@ export default function VexFlowNotationPreview({
           context.stroke()
         }
 
-        if (duration !== '4' && beamGroups) {
-          if (mode === 'accent') {
-            accentVoice.beamGroups.forEach((notesInBar) => {
-              Beam.generateBeams(notesInBar, {
-                groups: beamGroups,
-                beam_rests: false,
-                show_stemlets: false,
-              }).forEach((beam) => {
-                beam.setContext(context).draw()
-              })
+        if (baseDuration !== '4') {
+          const beamGroupsFraction = [new Fraction(1, 4)]
+          voice1Data.beamGroups.forEach((notesInBar) => {
+            Beam.generateBeams(notesInBar, {
+              groups: beamGroupsFraction,
+              beam_rests: false,
+              show_stemlets: false,
+              maintain_stem_directions: true,
+            }).forEach((beam) => {
+              beam.setContext(context).draw()
             })
-          }
+          })
 
-          if (mode === 'fillin' && lowerVoiceData.beamGroups) {
-            lowerVoiceData.beamGroups.forEach((notesInBar) => {
-              Beam.generateBeams(notesInBar, {
-                groups: beamGroups,
-                beam_rests: false,
-                show_stemlets: false,
-              }).forEach((beam) => {
-                beam.setContext(context).draw()
-              })
+          voice2Data.beamGroups.forEach((notesInBar) => {
+            Beam.generateBeams(notesInBar, {
+              groups: beamGroupsFraction,
+              beam_rests: false,
+              show_stemlets: false,
+              maintain_stem_directions: true,
+            }).forEach((beam) => {
+              beam.setContext(context).draw()
             })
-          }
+          })
         }
       } catch (error) {
         console.error('VexFlow preview failed:', error)
@@ -441,7 +294,7 @@ export default function VexFlowNotationPreview({
       cancelled = true
       container.innerHTML = ''
     }
-  }, [pattern, noteType, mode, activeStepIndex, containerWidth])
+  }, [pattern, noteType, mode, activeStepIndex])
 
   if (errorMessage) {
     return (
@@ -452,5 +305,9 @@ export default function VexFlowNotationPreview({
     )
   }
 
-  return <div ref={containerRef} className="abc-preview vexflow-preview" />
+  return (
+    <div style={{ overflowX: 'auto', width: '100%', paddingBottom: '16px', scrollbarWidth: 'thin' }}>
+      <div ref={containerRef} className="abc-preview vexflow-preview" style={{ minWidth: 'min-content' }} />
+    </div>
+  )
 }

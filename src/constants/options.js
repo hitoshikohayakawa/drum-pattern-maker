@@ -63,6 +63,7 @@ export const KIT_LIBRARY_OPTIONS = [
 export const NOTATION_ENGINE_OPTIONS = [
   { value: 'svg', label: 'SVG（標準）' },
   { value: 'vexflow', label: 'VexFlow（ベータ）' },
+  { value: 'image', label: '原典画像 (Image)' },
 ]
 
 export const PRACTICE_MENU = [

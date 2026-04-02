@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drum Pattern Maker フィルイン学習仕様書</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --paper: #ffffff;
+    --ink: #111827;
+    --muted: #4b5563;
+    --line: #d1d5db;
+    --accent: #111827;
+    --soft: #eef2ff;
+    --soft2: #f9fafb;
+    --warn: #fff7ed;
+    --link: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif; }
+  .page { max-width: 1200px; margin: 0 auto; padding: 40px 28px 64px; }
+  .hero { background: linear-gradient(180deg, #fff, #f8fafc); border: 1px solid var(--line); border-radius: 20px; padding: 32px; box-shadow: 0 10px 30px rgba(17,24,39,.06); }
+  h1 { margin: 0 0 8px; font-size: 34px; line-height: 1.2; }
+  .subtitle { color: var(--muted); margin-bottom: 12px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .pill { background: var(--soft); border: 1px solid #c7d2fe; border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+  .section { margin-top: 28px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 0 8px 24px rgba(17,24,39,.04); }
+  h2 { margin: 0 0 14px; font-size: 25px; }
+  h3 { margin: 18px 0 10px; font-size: 18px; }
+  h4 { margin: 14px 0 8px; font-size: 16px; }
+  p, li { color: var(--ink); }
+  .muted { color: var(--muted); }
+  .note { background: var(--warn); border: 1px solid #fdba74; border-radius: 14px; padding: 14px 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .card { background: var(--soft2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid var(--line); padding: 10px 12px; vertical-align: top; }
+  th { background: #f3f4f6; text-align: left; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { background: #0f172a; color: #e5e7eb; padding: 14px; border-radius: 14px; overflow: auto; line-height: 1.5; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .toc ol { margin: 0; padding-left: 1.25rem; }
+  .toc li { margin: 4px 0; }
+  .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 14px; }
+  .gallery-single { grid-template-columns: 1fr; }
+  .img-card { margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .img-wrap { padding: 10px; background: #fafafa; }
+  .img-card img { width: 100%; height: auto; display: block; border: 1px solid #e5e7eb; background: #fff; }
+  .img-card figcaption { padding: 10px 12px 14px; font-size: 13px; color: var(--muted); word-break: break-all; }
+  details { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--paper); margin-bottom: 14px; }
+  summary { cursor: pointer; font-weight: 700; }
+  .taglist { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 10px; font-size: 13px; }
+  .small { font-size: 14px; }
+  .source-list li { margin-bottom: 8px; }
+  @media (max-width: 960px) {
+    .grid-2, .grid-3, .gallery { grid-template-columns: 1fr; }
+    .page { padding: 18px; }
+    h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="hero">
+    <h1>Drum Pattern Maker フィルイン学習仕様書</h1>
+    <div class="subtitle">DARYL’s Drum Channel Lesson 15 を基準データとして取り込みつつ、世界最強クラスのドラム学習・生成・再生に耐えるフィルイン仕様へ拡張するための開発文書。</div>
+    <div class="meta">
+      <span class="pill">用途: 開発環境常設ドキュメント</span>
+      <span class="pill">対象: 生成ロジック / 楽譜表示 / 再生 / 学習データ設計</span>
+      <span class="pill">版: v1.0</span>
+      <span class="pill">原典: DARYL’s Drum Channel Lesson 15</span>
+    </div>
+  </section>
+
+  <section class="section toc">
+    <h2>目次</h2>
+    <ol>
+      <li>目的と前提</li>
+      <li>原典リファレンスの要約</li>
+      <li>Drum Pattern Maker に採用すべきフィルイン分類</li>
+      <li>譜面仕様（内部表現と表示仕様）</li>
+      <li>学習データ仕様（JSON / ラベル設計）</li>
+      <li>生成・再生エンジン仕様</li>
+      <li>学習カリキュラムと難易度定義</li>
+      <li>原典画像アーカイブ</li>
+      <li>参考文献・ソース</li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2>1. 目的と前提</h2>
+    <p>この仕様書の目的は、<strong>Drum Pattern Maker</strong> にフィルイン学習機能を実装するにあたり、(a) 既存教材の取り込み方、(b) 内部データモデル、(c) 楽譜表示ルール、(d) オーディオ再生ルール、(e) 将来拡張可能な分類体系、をひとつの基準にまとめることです。</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>最低限やるべきこと</h3>
+        <ul>
+          <li>DARYL’s Drum Channel Lesson 15 の 100 フィルインを基礎コーパスとして管理する。</li>
+          <li>フィルインを <strong>1拍 / 2拍 / 3拍 / 4拍</strong> の句長で管理する。</li>
+          <li>8分・16分・8分三連・16分三連・混合 のどのグリッドでも内部表現できるようにする。</li>
+          <li>表示（abcjs等）と再生（Tone.js等）は必ず <strong>同じ正規化済みイベント列</strong> から作る。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>この文書の運用方針</h3>
+        <ul>
+          <li>原典画像は下部の「原典画像アーカイブ」に全件掲載。</li>
+          <li>原典画像は <strong>外部参照URL</strong> で埋め込み。長期運用時はローカルミラー化推奨。</li>
+          <li>楽譜表示は abcjs、音は Tone.js を前提としたハイブリッドを基本案とする。</li>
+          <li>権利処理が不明な外部画像は <strong>社内参照用</strong> として扱い、公開配布時は自社生成譜面へ置換する。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note small" style="margin-top:16px;">
+      <strong>重要:</strong> 原典ページは 1拍・2拍・3拍・4拍のフレーズを含む 100 種類のフィルインを楽譜付きで公開しており、最初に楽譜記号の読み方の画像を掲示しています。文書後半では、この原典を土台にしつつ、追加で triplet / linear / rudiment-derived fill まで包含する仕様へ拡張しています。
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>2. 原典リファレンスの要約</h2>
+    <div class="grid-2">
+      <div>
+        <h3>2.1 Lesson 15 から直接取り込むべきもの</h3>
+        <ul>
+          <li>楽譜記号の読み方（ドラムキー画像）</li>
+          <li>No.1 〜 No.100 の各画像</li>
+          <li>各パターンの相対難易度・音価・オーケストレーション・スティッキング</li>
+          <li>「句長」と「着地点（次の小節頭にどう戻るか）」</li>
+        </ul>
+        <h3>2.2 原典から分かる教材設計</h3>
+        <ul>
+          <li>フィルインを「定番フレーズからカッコイイフレーズまで」として体系化している。</li>
+          <li>学習者目線では、句長ごとの段階学習が前提。</li>
+          <li>画像ベース教材なので、まずは <strong>視認性</strong> と <strong>繰り返し再現性</strong> が優先されている。</li>
+        </ul>
+      </div>
+      <div>
+        <figure class="img-card" style="margin:0;">
+          <div class="img-wrap"><img src="https://daryls-drum-channel.net/wp-content/uploads/2022/03/%E6%A5%BD%E8%AD%9C%E8%A8%98%E5%8F%B7%E3%81%AE%E8%AA%AD%E3%81%BF%E6%96%B9%E7%95%AA%E5%8F%B7%E4%BB%98%E3%81%8D.jpg" alt="楽譜記号の読み方" loading="lazy"></div>
+          <figcaption>原典の「楽譜記号の読み方」。内部のカノニカル・ドラムキーはこの画像を尊重しつつ、下記の内部仕様で統一する。</figcaption>
+        </figure>
+      </div>
+    </div>
+    <h3>2.3 原典画像の取り込み単位</h3>
+    <table>
+      <thead>
+        <tr><th>単位</th><th>管理方法</th><th>必須メタデータ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lesson 全体</td><td>1 つの source collection として管理</td><td>source_title, source_url, author, captured_at</td></tr>
+        <tr><td>画像 1 枚</td><td>pattern asset として管理</td><td>pattern_no, image_url, phrase_length_beats, subdivision, notes_count</td></tr>
+        <tr><td>譜面内イベント</td><td>イベント配列へ正規化</td><td>step, voice, dynamic, articulation, sticking, landing_role</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>3. Drum Pattern Maker に採用すべきフィルイン分類</h2>
+    <p>世界最強クラスの学習体験を目指すなら、単に原典 100 パターンを丸ごと覚えさせるのではなく、<strong>「どの文法で出来ているか」</strong> を分類して学習できる必要があります。外部リファレンスを統合した、推奨カテゴリは以下です。</p>
+    <table>
+      <thead>
+        <tr><th>分類</th><th>主なグリッド</th><th>例</th><th>導入難易度</th><th>実装タグ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>ストレート8分系</td><td>8分</td><td>traditional 8th note fill / build</td><td>初級</td><td>straight_8th, one_bar, half_bar</td></tr>
+        <tr><td>ストレート16分系</td><td>16分</td><td>traditional 16th note fill</td><td>初級〜中級</td><td>straight_16th, around_the_kit</td></tr>
+        <tr><td>キック混合系</td><td>8分・16分</td><td>splat-boom / kick-assisted fill</td><td>初級〜中級</td><td>kick_assisted, hand_foot_combo</td></tr>
+        <tr><td>モチーフ系</td><td>16分</td><td>Pat Boone Debby Boone / Bucket of Fish</td><td>中級</td><td>mnemonic, motif_fill</td></tr>
+        <tr><td>Motown / R&B系</td><td>16分</td><td>Motown fill</td><td>中級</td><td>motown, rack_snare_floor</td></tr>
+        <tr><td>8分三連系</td><td>8分三連</td><td>short triplet fills</td><td>中級</td><td>triplet_8th</td></tr>
+        <tr><td>16分三連系</td><td>16分三連</td><td>triplet around-the-kit exercises</td><td>中級〜上級</td><td>triplet_16th, sixlet</td></tr>
+        <tr><td>Linear 系</td><td>16分 / 16分三連</td><td>no-unison hand/foot phrases</td><td>中級〜上級</td><td>linear, no_unison</td></tr>
+        <tr><td>Rudiment 応用系</td><td>8分・16分・三連</td><td>paradiddle / flam / drag / swiss-army-triplet based fills</td><td>中級〜上級</td><td>rudimental, accent_grid</td></tr>
+        <tr><td>Bonham / rock triplet 系</td><td>8分三連</td><td>Bonham triplets</td><td>上級</td><td>bonham, triplet_power</td></tr>
+      </tbody>
+    </table>
+
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="card"><h4>初級</h4><div class="taglist"><span class="tag">1拍</span><span class="tag">2拍</span><span class="tag">8分</span><span class="tag">16分</span><span class="tag">スネア主体</span><span class="tag">タム回し最小</span></div></div>
+      <div class="card"><h4>中級</h4><div class="taglist"><span class="tag">3拍</span><span class="tag">4拍</span><span class="tag">キック混合</span><span class="tag">三連</span><span class="tag">Motown</span><span class="tag">build</span></div></div>
+      <div class="card"><h4>上級</h4><div class="taglist"><span class="tag">linear</span><span class="tag">rudimental</span><span class="tag">Bonham</span><span class="tag">mixed subdivision</span><span class="tag">displacement</span><span class="tag">orchestration rotation</span></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>4. 譜面仕様（内部表現と表示仕様）</h2>
+    <h3>4.1 記譜原則</h3>
+    <p>内部仕様は PAS 系ガイドラインの考え方に寄せる。つまり、<strong>伝統的記譜法の延長で、見た瞬間に認識しやすく、記号の意味が一意で、表記キーを必ず先頭に出す</strong> ことを原則とする。特にドラムセットは「絶対標準」がないため、毎回 legend / key を先頭に出し、同一出版物・同一画面では記号の意味を固定する。</p>
+    <table>
+      <thead>
+        <tr><th>項目</th><th>採用仕様</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>五線</td><td>5線 + neutral/percussion clef</td><td>ドラムセット全体は音高よりも位置識別を優先</td></tr>
+        <tr><td>キー（legend）</td><td>全作品の先頭に必須</td><td>使用する全楽器、note head、articulation、beater、sticking を定義</td></tr>
+        <tr><td>スネア</td><td>第三間（canonical internal rule）</td><td>調査文献でも最多派</td></tr>
+        <tr><td>バスドラム</td><td>第一間（canonical internal rule）</td><td>調査文献でも多数派</td></tr>
+        <tr><td>ハイハット（手）</td><td>譜表上方のスペース、x-notehead</td><td>閉じ/開きは articulation で区別</td></tr>
+        <tr><td>ハイハット（足）</td><td>譜表下のスペース</td><td>foot splash/close は別 articulation</td></tr>
+        <tr><td>ライド</td><td>上線</td><td>x-notehead</td></tr>
+        <tr><td>クラッシュ</td><td>譜表上の補助線</td><td>x-notehead</td></tr>
+        <tr><td>タム</td><td>内部 ID で管理し、表示時に kit layout に応じて割当</td><td>2タム/3タム/4タム構成差に強くする</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 内部時間表現</h3>
+    <ul>
+      <li>meter: デフォルト 4/4</li>
+      <li>phrase_length_beats: 1 / 2 / 3 / 4</li>
+      <li>subdivision: eighth / sixteenth / eighth_triplet / sixteenth_triplet / mixed</li>
+      <li>canonical grid: 1拍 = 12 tick を基準にして、8分・16分・三連を共通変換可能にする（例: 1拍12tickなら 8分=6tick, 16分=3tick, 8分三連=4tick）。</li>
+      <li>表示は abcjs / SVG / Canvas に合わせて変換、再生は Tone.js イベント列に変換。</li>
+    </ul>
+
+    <h3>4.3 表示用の canonical event schema</h3>
+    <pre>type DrumEvent = {
+  tick: number;              // 小節頭からの絶対 tick
+  durationTick: number;      // 音価
+  voice: &quot;snare&quot; | &quot;kick&quot; | &quot;hh&quot; | &quot;ride&quot; | &quot;crash&quot; | &quot;splash&quot; | &quot;hiTom&quot; | &quot;midTom&quot; | &quot;lowTom&quot; | &quot;rim&quot;;
+  hand?: &quot;R&quot; | &quot;L&quot; | &quot;K&quot;;
+  dynamic?: &quot;ghost&quot; | &quot;weak&quot; | &quot;normal&quot; | &quot;accent&quot; | &quot;max&quot;;
+  articulation?: &quot;closed&quot; | &quot;open&quot; | &quot;flam&quot; | &quot;drag&quot; | &quot;buzz&quot; | &quot;rimshot&quot; | &quot;crossStick&quot; | &quot;choke&quot;;
+  accent?: boolean;
+  grace?: boolean;
+  source?: &quot;daryl15&quot; | &quot;drumeo&quot; | &quot;manual&quot; | &quot;generated&quot;;
+};</pre>
+
+    <h3>4.4 表示ルール</h3>
+    <ul>
+      <li>初心者向けモードでは、音価ごとのグリッド、強弱、句長の把握を優先し、必要なら簡略表示を許可する。</li>
+      <li>上級モードでは、ゴーストノート、フラム、ドラッグ、オープン/クローズHH まで表現する。</li>
+      <li>キックとハンド系イベントは同 tick に共存可能。</li>
+      <li>landing beat（多くは次小節頭）を強調表示できると学習効率が高い。</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>5. 学習データ仕様（JSON / ラベル設計）</h2>
+    <h3>5.1 pattern レコード</h3>
+    <pre>{
+  &quot;id&quot;: &quot;daryl15_no001&quot;,
+  &quot;source&quot;: {
+    &quot;collection&quot;: &quot;daryl_drumlesson15_fillin&quot;,
+    &quot;url&quot;: &quot;https://daryls-drum-channel.net/drumlesson15-fill-in/&quot;,
+    &quot;image_url&quot;: &quot;https://daryls-drum-channel.net/wp-content/uploads/2022/08/1.jpg&quot;,
+    &quot;pattern_no&quot;: 1
+  },
+  &quot;meter&quot;: &quot;4/4&quot;,
+  &quot;phrase_length_beats&quot;: 1,
+  &quot;subdivision&quot;: &quot;sixteenth&quot;,
+  &quot;difficulty&quot;: {
+    &quot;tier&quot;: &quot;beginner&quot;,
+    &quot;score&quot;: 1.0
+  },
+  &quot;style_tags&quot;: [&quot;straight_16th&quot;, &quot;transition_fill&quot;],
+  &quot;orchestration&quot;: [&quot;snare&quot;, &quot;hiTom&quot;, &quot;midTom&quot;, &quot;lowTom&quot;, &quot;kick&quot;, &quot;crash&quot;],
+  &quot;events&quot;: [],
+  &quot;landing&quot;: {
+    &quot;beat&quot;: 1,
+    &quot;voices&quot;: [&quot;crash&quot;, &quot;kick&quot;],
+    &quot;confidence&quot;: 0.5
+  },
+  &quot;review&quot;: {
+    &quot;human_verified&quot;: false,
+    &quot;notes&quot;: &quot;phrase_length と subdivision は手動確認前提&quot;
+  }
+}</pre>
+
+    <h3>5.2 必須ラベル</h3>
+    <div class="grid-2">
+      <div class="card">
+        <ul>
+          <li>phrase_length_beats</li>
+          <li>subdivision</li>
+          <li>contains_kick</li>
+          <li>contains_triplet</li>
+          <li>contains_linear_motion</li>
+          <li>contains_rudiment_motif</li>
+          <li>ending_on_crash</li>
+        </ul>
+      </div>
+      <div class="card">
+        <ul>
+          <li>hand_lead (R/L)</li>
+          <li>orchestration_direction (high_to_low / mixed / snare_centered)</li>
+          <li>dynamic_profile (flat / crescendo / accent_grid / mixed)</li>
+          <li>genre_hint (rock / motown / fusion / gospel / classic)</li>
+          <li>pedagogical_stage</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>5.3 augmentation / 派生生成</h3>
+    <table>
+      <thead>
+        <tr><th>操作</th><th>説明</th><th>注意</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>orchestration rotation</td><td>SN→HT→MT→LT の配置換え</td><td>学習者の体格差やキット差に対応</td></tr>
+        <tr><td>accent inversion</td><td>アクセント位置のみ反転</td><td>難易度が急上昇する場合がある</td></tr>
+        <tr><td>subdivision swap</td><td>8分→16分、16分→三連など</td><td>元フレーズのキャラクターを保持するタグが必要</td></tr>
+        <tr><td>kick insertion</td><td>ハンド主体フレーズに BD を追加</td><td>linear 系と non-linear 系を区別</td></tr>
+        <tr><td>rudiment substitution</td><td>single stroke を paradiddle / flam / drag に置換</td><td>元の句長を崩さないこと</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>6. 生成・再生エンジン仕様</h2>
+    <h3>6.1 生成エンジン</h3>
+    <ul>
+      <li>表示レイヤは abcjs 等に任せても、生成の真実は必ず canonical event sequence に置く。</li>
+      <li>原典画像しかないパターンは、最初に semi-structured annotation を作る。</li>
+      <li>annotation 手順: 画像参照 → 句長推定 → subdivision 推定 → voice sequence 入力 → sticking/dynamic 補完 → human QA。</li>
+      <li>最終的には「source image を見せなくても」内部イベントだけで譜面再構成できる状態にする。</li>
+    </ul>
+
+    <h3>6.2 Tone.js 再生ルール</h3>
+    <ul>
+      <li>kick = 独立音色、snare weak = 弱いノイズ系 / short transient、snare accent = 同音色の gain 増し、tom = pitch-mapped membrane、crash = metallic noise / sample。</li>
+      <li>ユーザーが再生を押した後に audio context を開始する。</li>
+      <li>再生カーソルは表示譜面と同じ step index を使って光らせる。</li>
+      <li>将来的に 1行再生 / 全行連続再生 / ループ再生 / カウントイン再生 を選択可能にする。</li>
+    </ul>
+
+    <h3>6.3 abcjs 表示レイヤ</h3>
+    <ul>
+      <li>abcjs は表示用。原則として「学習データの正規化」と「音声生成」は abcjs に依存しない。</li>
+      <li>abcjs に渡す前に internal event → notation token 変換レイヤを設ける。</li>
+      <li>今後、初心者用簡略譜 / 標準譜 / 練習用分解表示 の 3モードを切替可能にする。</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>7. 学習カリキュラムと難易度定義</h2>
+    <table>
+      <thead>
+        <tr><th>レベル</th><th>到達目標</th><th>解禁カテゴリ</th><th>表示推奨</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lv.1</td><td>句長1拍、8分/16分の単純フィルを拍頭に着地</td><td>straight_8th / straight_16th</td><td>簡略譜 + 音価グリッド</td></tr>
+        <tr><td>Lv.2</td><td>2拍〜4拍のストレート fill、タム回し、弱アクセント</td><td>build / around_the_kit / kick_assisted</td><td>簡略譜 + 強弱</td></tr>
+        <tr><td>Lv.3</td><td>Motown / mnemonic / phrase ending を理解</td><td>motown / motif_fill</td><td>標準譜 + カウント表示</td></tr>
+        <tr><td>Lv.4</td><td>8分三連 / 16分三連 / kick displacement</td><td>triplet_8th / triplet_16th</td><td>標準譜 + subdivision 補助</td></tr>
+        <tr><td>Lv.5</td><td>linear / rudimental / Bonham triplet を音楽的に使う</td><td>linear / rudimental / bonham</td><td>標準譜 + sticking + dynamics</td></tr>
+      </tbody>
+    </table>
+
+    <h3>推奨順序</h3>
+    <ol>
+      <li>1拍フィル → 2拍フィル → 4拍フィル</li>
+      <li>8分 → 16分 → 8分三連 → 16分三連</li>
+      <li>スネア中心 → タム回し → キック混合 → linear</li>
+      <li>single stroke → accent pattern → rudiment derived</li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2>8. 原典画像アーカイブ</h2>
+    <p class="muted">以下は Lesson 15 の原典画像アーカイブ。開発環境から参照しやすいように、原典URLをそのまま文書内に埋め込んでいます。運用上は lazy load 前提です。恒久利用する場合は著作権・利用条件を確認のうえローカルミラーを作成してください。</p>
+    <details open><summary>楽譜記号の読み方（原典画像）</summary><div class="gallery gallery-single"><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/03/%E6%A5%BD%E8%AD%9C%E8%A8%98%E5%8F%B7%E3%81%AE%E8%AA%AD%E3%81%BF%E6%96%B9%E7%95%AA%E5%8F%B7%E4%BB%98%E3%81%8D.jpg" alt="楽譜記号の読み方"></div><figcaption>楽譜記号の読み方<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/03/%E6%A5%BD%E8%AD%9C%E8%A8%98%E5%8F%B7%E3%81%AE%E8%AA%AD%E3%81%BF%E6%96%B9%E7%95%AA%E5%8F%B7%E4%BB%98%E3%81%8D.jpg</code></figcaption></figure></div></details><details><summary>原典フィルイン画像 No.1〜No.25</summary><div class="gallery"><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/1.jpg" alt="No.1"></div><figcaption>No.1<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/1.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/2.jpg" alt="No.2"></div><figcaption>No.2<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/2.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/3.jpg" alt="No.3"></div><figcaption>No.3<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/3.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/4.jpg" alt="No.4"></div><figcaption>No.4<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/4.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/5.jpg" alt="No.5"></div><figcaption>No.5<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/5.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/6.jpg" alt="No.6"></div><figcaption>No.6<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/6.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/7.jpg" alt="No.7"></div><figcaption>No.7<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/7.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/8.jpg" alt="No.8"></div><figcaption>No.8<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/8.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/9.jpg" alt="No.9"></div><figcaption>No.9<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/9.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/10.jpg" alt="No.10"></div><figcaption>No.10<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/10.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/11.jpg" alt="No.11"></div><figcaption>No.11<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/11.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/12.jpg" alt="No.12"></div><figcaption>No.12<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/12.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/13.jpg" alt="No.13"></div><figcaption>No.13<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/13.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/14.jpg" alt="No.14"></div><figcaption>No.14<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/14.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/15.jpg" alt="No.15"></div><figcaption>No.15<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/15.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/16.jpg" alt="No.16"></div><figcaption>No.16<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/16.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/17.jpg" alt="No.17"></div><figcaption>No.17<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/17.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/18.jpg" alt="No.18"></div><figcaption>No.18<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/18.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/19.jpg" alt="No.19"></div><figcaption>No.19<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/19.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/20.jpg" alt="No.20"></div><figcaption>No.20<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/20.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/21.jpg" alt="No.21"></div><figcaption>No.21<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/21.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/22.jpg" alt="No.22"></div><figcaption>No.22<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/22.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/23.jpg" alt="No.23"></div><figcaption>No.23<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/23.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/24.jpg" alt="No.24"></div><figcaption>No.24<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/24.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/25.jpg" alt="No.25"></div><figcaption>No.25<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/25.jpg</code></figcaption></figure></div></details><details><summary>原典フィルイン画像 No.26〜No.50</summary><div class="gallery"><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/26.jpg" alt="No.26"></div><figcaption>No.26<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/26.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/27.jpg" alt="No.27"></div><figcaption>No.27<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/27.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/28.jpg" alt="No.28"></div><figcaption>No.28<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/28.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/29.jpg" alt="No.29"></div><figcaption>No.29<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/29.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/30.jpg" alt="No.30"></div><figcaption>No.30<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/30.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/31.jpg" alt="No.31"></div><figcaption>No.31<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/31.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/32.jpg" alt="No.32"></div><figcaption>No.32<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/32.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/33.jpg" alt="No.33"></div><figcaption>No.33<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/33.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/34.jpg" alt="No.34"></div><figcaption>No.34<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/34.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/35.jpg" alt="No.35"></div><figcaption>No.35<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/35.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/36.jpg" alt="No.36"></div><figcaption>No.36<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/36.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/37.jpg" alt="No.37"></div><figcaption>No.37<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/37.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/38.jpg" alt="No.38"></div><figcaption>No.38<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/38.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/39.jpg" alt="No.39"></div><figcaption>No.39<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/39.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/40.jpg" alt="No.40"></div><figcaption>No.40<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/40.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/41.jpg" alt="No.41"></div><figcaption>No.41<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/41.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/42.jpg" alt="No.42"></div><figcaption>No.42<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/42.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/43.jpg" alt="No.43"></div><figcaption>No.43<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/43.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/44.jpg" alt="No.44"></div><figcaption>No.44<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/44.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/45.jpg" alt="No.45"></div><figcaption>No.45<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/45.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/46.jpg" alt="No.46"></div><figcaption>No.46<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/46.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/47.jpg" alt="No.47"></div><figcaption>No.47<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/47.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/48.jpg" alt="No.48"></div><figcaption>No.48<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/48.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/49.jpg" alt="No.49"></div><figcaption>No.49<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/49.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/50.jpg" alt="No.50"></div><figcaption>No.50<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/50.jpg</code></figcaption></figure></div></details><details><summary>原典フィルイン画像 No.51〜No.75</summary><div class="gallery"><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/51.jpg" alt="No.51"></div><figcaption>No.51<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/51.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/52.jpg" alt="No.52"></div><figcaption>No.52<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/52.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/53.jpg" alt="No.53"></div><figcaption>No.53<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/53.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/54.jpg" alt="No.54"></div><figcaption>No.54<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/54.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/55.jpg" alt="No.55"></div><figcaption>No.55<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/55.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/56.jpg" alt="No.56"></div><figcaption>No.56<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/56.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/57.jpg" alt="No.57"></div><figcaption>No.57<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/57.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/58.jpg" alt="No.58"></div><figcaption>No.58<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/58.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/59.jpg" alt="No.59"></div><figcaption>No.59<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/59.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/60.jpg" alt="No.60"></div><figcaption>No.60<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/60.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/61.jpg" alt="No.61"></div><figcaption>No.61<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/61.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/62.jpg" alt="No.62"></div><figcaption>No.62<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/62.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/63.jpg" alt="No.63"></div><figcaption>No.63<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/63.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/64.jpg" alt="No.64"></div><figcaption>No.64<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/64.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/65.jpg" alt="No.65"></div><figcaption>No.65<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/65.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/66.jpg" alt="No.66"></div><figcaption>No.66<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/66.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/67.jpg" alt="No.67"></div><figcaption>No.67<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/67.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/68.jpg" alt="No.68"></div><figcaption>No.68<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/68.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/69.jpg" alt="No.69"></div><figcaption>No.69<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/69.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/70.jpg" alt="No.70"></div><figcaption>No.70<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/70.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/71.jpg" alt="No.71"></div><figcaption>No.71<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/71.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/72.jpg" alt="No.72"></div><figcaption>No.72<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/72.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/73.jpg" alt="No.73"></div><figcaption>No.73<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/73.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/74.jpg" alt="No.74"></div><figcaption>No.74<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/74.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/75.jpg" alt="No.75"></div><figcaption>No.75<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/75.jpg</code></figcaption></figure></div></details><details><summary>原典フィルイン画像 No.76〜No.100</summary><div class="gallery"><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/76.jpg" alt="No.76"></div><figcaption>No.76<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/76.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/77.jpg" alt="No.77"></div><figcaption>No.77<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/77.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/78.jpg" alt="No.78"></div><figcaption>No.78<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/78.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/79.jpg" alt="No.79"></div><figcaption>No.79<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/79.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/80.jpg" alt="No.80"></div><figcaption>No.80<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/80.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/81.jpg" alt="No.81"></div><figcaption>No.81<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/81.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/82.jpg" alt="No.82"></div><figcaption>No.82<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/82.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/83.jpg" alt="No.83"></div><figcaption>No.83<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/83.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/84.jpg" alt="No.84"></div><figcaption>No.84<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/84.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/85.jpg" alt="No.85"></div><figcaption>No.85<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/85.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/86.jpg" alt="No.86"></div><figcaption>No.86<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/86.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/87.jpg" alt="No.87"></div><figcaption>No.87<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/87.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/88.jpg" alt="No.88"></div><figcaption>No.88<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/88.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/89.jpg" alt="No.89"></div><figcaption>No.89<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/89.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/90.jpg" alt="No.90"></div><figcaption>No.90<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/90.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/91.jpg" alt="No.91"></div><figcaption>No.91<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/91.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/92.jpg" alt="No.92"></div><figcaption>No.92<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/92.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/93.jpg" alt="No.93"></div><figcaption>No.93<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/93.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/94.jpg" alt="No.94"></div><figcaption>No.94<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/94.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/95.jpg" alt="No.95"></div><figcaption>No.95<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/95.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/96.jpg" alt="No.96"></div><figcaption>No.96<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/96.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/97.jpg" alt="No.97"></div><figcaption>No.97<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/97.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/98.jpg" alt="No.98"></div><figcaption>No.98<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/98.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/99.jpg" alt="No.99"></div><figcaption>No.99<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/99.jpg</code></figcaption></figure><figure class="img-card"><div class="img-wrap"><img loading="lazy" src="https://daryls-drum-channel.net/wp-content/uploads/2022/08/100.jpg" alt="No.100"></div><figcaption>No.100<br><code>https://daryls-drum-channel.net/wp-content/uploads/2022/08/100.jpg</code></figcaption></figure></div></details>
+  </section>
+
+  <section class="section">
+    <h2>9. 参考文献・ソース</h2>
+    <ol class="source-list">
+      <li><a href="https://daryls-drum-channel.net/drumlesson15-fill-in/" target="_blank" rel="noopener">DARYL’s Drum Channel: フィルイン100種類の叩き方（Lesson 15）</a> — 原典の 100 フィルインと楽譜記号画像。</li>
+      <li><a href="https://www.drumnotes.com/docs/notation.pdf" target="_blank" rel="noopener">Guideline for Drumset Notation (Percussive Notes / Drumnotes PDF)</a> — 伝統的記譜法の延長、legend を先頭に置くこと、5線 + neutral clef、代表的 staff positions など。</li>
+      <li><a href="https://www.halleonard.com/product/6620063/guide-to-standardized-drumset-notation" target="_blank" rel="noopener">Hal Leonard / PAS: Guide to Standardized Drumset Notation</a> — drumset notation に絶対標準がないことと、PAS ガイドラインの存在確認。</li>
+      <li><a href="https://pas.org/rudiments/" target="_blank" rel="noopener">Percussive Arts Society: International Drum Rudiments</a> — 40 rudiments を vocabulary として採用する根拠。</li>
+      <li><a href="https://www.drumeo.com/beat/beginner-drum-fills/" target="_blank" rel="noopener">Drumeo: 7 Beginner Drum Fills (For Any Style)</a> — beginner fill family と fill duration の整理。</li>
+      <li><a href="https://www.onlinedrummer.com/blogs/drum-lessons/short-triplet-fills-you-can-play-today" target="_blank" rel="noopener">OnlineDrummer: Short Triplet Fills You Can Play Today</a> — 8分三連 / 16分三連の短い fill family。</li>
+      <li><a href="https://media.onlinedrummer.com/wp-content/uploads/sixteenth-note-triplet-patterns.pdf" target="_blank" rel="noopener">OnlineDrummer: Sixteenth-Note Triplet Fill Patterns</a> — sixteenth-note triplet の around-the-kit pattern 例。</li>
+      <li><a href="https://www.drumeo.com/beat/10-levels-of-linear-drumming/" target="_blank" rel="noopener">Drumeo: 10 Levels Of Linear Drumming</a> — linear fill / groove family の段階学習。</li>
+      <li><a href="https://www.drumeo.com/beat/how-to-play-triplets-like-bonham/" target="_blank" rel="noopener">Drumeo: How To Play Triplets Like Bonham</a> — rock triplet 系 advanced family の代表。</li>
+      <li><a href="https://www.onlinedrummer.com/pages/drum-key" target="_blank" rel="noopener">OnlineDrummer: Drum Notation Guide - Drum Key</a> — 実務上よく使われる drum key の参照。</li>
+    </ol>
+  </section>
+</div>
+</body>
+</html>

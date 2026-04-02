@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import * as Tone from 'tone'
 import SvgNotationPreview from './components/SvgNotationPreview'
 import VexFlowNotationPreview from './components/VexFlowNotationPreview.jsx'
+import ImageNotationPreview from './components/ImageNotationPreview.jsx'
+import { getFillinImages } from './utils/fillinData.js'
 
 import {
   NOTE_OPTIONS,
@@ -540,7 +542,14 @@ export default function App() {
     })
   }, [fillPatterns])
 
-  const PreviewComponent = notationEngine === 'vexflow' ? VexFlowNotationPreview : SvgNotationPreview
+  const PreviewComponent =
+    notationEngine === 'vexflow'
+      ? VexFlowNotationPreview
+      : notationEngine === 'image'
+      ? ImageNotationPreview
+      : SvgNotationPreview
+
+  const allImages = useMemo(() => getFillinImages(), [])
 
   const practiceMenuButtons = PRACTICE_MENU.map((item) => (
     <button
@@ -814,29 +823,39 @@ export default function App() {
             <h2>{practiceMode === 'accent' ? 'Accent Score' : 'Fill-In Score'}</h2>
             <div className="svg-preview-list">
               {practiceMode === 'accent' ? (
-                patterns.map((pattern, index) => (
-                  <PreviewComponent
-                    key={`preview-${refreshKey}-${index}`}
-                    pattern={pattern}
-                    noteType={noteType}
-                    orchestration={orchestration}
-                    mode="accent"
-                    showAccentMarks
-                    activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activePatternOffsets[index]}
-                  />
-                ))
+                patterns.map((pattern, index) => {
+                  const url = allImages.find((img) => img.id === 'legend')?.url
+                  return (
+                    <PreviewComponent
+                      key={`preview-${refreshKey}-${index}`}
+                      pattern={pattern}
+                      noteType={noteType}
+                      orchestration={orchestration}
+                      mode="accent"
+                      showAccentMarks
+                      activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activePatternOffsets[index]}
+                      imageUrl={url}
+                    />
+                  )
+                })
               ) : (
-                fillPatterns.map((pattern, index) => (
-                  <PreviewComponent
-                    key={`fill-preview-${refreshKey}-${index}`}
-                    pattern={pattern}
-                    noteType="16th"
-                    orchestration="tomCymbal"
-                    mode="fillin"
-                    showAccentMarks={false}
-                    activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activeFillPatternOffsets[index]}
-                  />
-                ))
+                fillPatterns.map((pattern, index) => {
+                  const patternNo = (index % 100) + 1
+                  const imageId = `fill-${String(patternNo).padStart(3, '0')}`
+                  const url = allImages.find((img) => img.id === imageId)?.url || allImages.find((img) => img.id === 'legend')?.url
+                  return (
+                    <PreviewComponent
+                      key={`fill-preview-${refreshKey}-${index}`}
+                      pattern={pattern}
+                      noteType="16th"
+                      orchestration="tomCymbal"
+                      mode="fillin"
+                      showAccentMarks={false}
+                      activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activeFillPatternOffsets[index]}
+                      imageUrl={url}
+                    />
+                  )
+                })
               )}
             </div>
           </div>

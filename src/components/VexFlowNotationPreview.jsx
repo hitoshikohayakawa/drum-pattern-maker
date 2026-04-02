@@ -71,7 +71,8 @@ function getLargestSpan(startIndex, barStartIndex, maxSpanSteps, slots, getKeys,
 
   for (const span of candidates) {
     if (span > maxSpanSteps) continue
-    if (offsetInBar % span !== 0) continue
+    // ドラム譜特有の視認性向上: オフビートであっても後続が空白なら吸収して4分音符等の形にし、邪魔な旗を消す
+    // if (offsetInBar % span !== 0) continue 
 
     let valid = true
     for (let index = 1; index < span; index += 1) {

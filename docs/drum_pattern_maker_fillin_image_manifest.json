@@ -1,0 +1,613 @@
+{
+  "document": "Drum Pattern Maker フィルイン学習仕様書",
+  "version": "1.0",
+  "source_page": "https://daryls-drum-channel.net/drumlesson15-fill-in/",
+  "images": [
+    {
+      "id": "legend",
+      "title": "楽譜記号の読み方",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/03/%E6%A5%BD%E8%AD%9C%E8%A8%98%E5%8F%B7%E3%81%AE%E8%AA%AD%E3%81%BF%E6%96%B9%E7%95%AA%E5%8F%B7%E4%BB%98%E3%81%8D.jpg",
+      "group": "legend"
+    },
+    {
+      "id": "fill-001",
+      "title": "No.1",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/1.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-002",
+      "title": "No.2",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/2.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-003",
+      "title": "No.3",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/3.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-004",
+      "title": "No.4",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/4.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-005",
+      "title": "No.5",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/5.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-006",
+      "title": "No.6",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/6.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-007",
+      "title": "No.7",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/7.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-008",
+      "title": "No.8",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/8.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-009",
+      "title": "No.9",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/9.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-010",
+      "title": "No.10",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/10.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-011",
+      "title": "No.11",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/11.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-012",
+      "title": "No.12",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/12.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-013",
+      "title": "No.13",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/13.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-014",
+      "title": "No.14",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/14.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-015",
+      "title": "No.15",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/15.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-016",
+      "title": "No.16",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/16.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-017",
+      "title": "No.17",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/17.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-018",
+      "title": "No.18",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/18.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-019",
+      "title": "No.19",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/19.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-020",
+      "title": "No.20",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/20.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-021",
+      "title": "No.21",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/21.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-022",
+      "title": "No.22",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/22.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-023",
+      "title": "No.23",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/23.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-024",
+      "title": "No.24",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/24.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-025",
+      "title": "No.25",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/25.jpg",
+      "group": "1"
+    },
+    {
+      "id": "fill-026",
+      "title": "No.26",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/26.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-027",
+      "title": "No.27",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/27.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-028",
+      "title": "No.28",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/28.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-029",
+      "title": "No.29",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/29.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-030",
+      "title": "No.30",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/30.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-031",
+      "title": "No.31",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/31.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-032",
+      "title": "No.32",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/32.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-033",
+      "title": "No.33",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/33.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-034",
+      "title": "No.34",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/34.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-035",
+      "title": "No.35",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/35.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-036",
+      "title": "No.36",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/36.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-037",
+      "title": "No.37",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/37.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-038",
+      "title": "No.38",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/38.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-039",
+      "title": "No.39",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/39.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-040",
+      "title": "No.40",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/40.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-041",
+      "title": "No.41",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/41.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-042",
+      "title": "No.42",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/42.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-043",
+      "title": "No.43",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/43.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-044",
+      "title": "No.44",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/44.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-045",
+      "title": "No.45",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/45.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-046",
+      "title": "No.46",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/46.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-047",
+      "title": "No.47",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/47.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-048",
+      "title": "No.48",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/48.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-049",
+      "title": "No.49",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/49.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-050",
+      "title": "No.50",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/50.jpg",
+      "group": "2"
+    },
+    {
+      "id": "fill-051",
+      "title": "No.51",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/51.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-052",
+      "title": "No.52",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/52.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-053",
+      "title": "No.53",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/53.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-054",
+      "title": "No.54",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/54.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-055",
+      "title": "No.55",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/55.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-056",
+      "title": "No.56",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/56.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-057",
+      "title": "No.57",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/57.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-058",
+      "title": "No.58",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/58.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-059",
+      "title": "No.59",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/59.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-060",
+      "title": "No.60",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/60.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-061",
+      "title": "No.61",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/61.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-062",
+      "title": "No.62",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/62.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-063",
+      "title": "No.63",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/63.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-064",
+      "title": "No.64",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/64.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-065",
+      "title": "No.65",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/65.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-066",
+      "title": "No.66",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/66.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-067",
+      "title": "No.67",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/67.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-068",
+      "title": "No.68",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/68.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-069",
+      "title": "No.69",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/69.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-070",
+      "title": "No.70",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/70.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-071",
+      "title": "No.71",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/71.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-072",
+      "title": "No.72",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/72.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-073",
+      "title": "No.73",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/73.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-074",
+      "title": "No.74",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/74.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-075",
+      "title": "No.75",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/75.jpg",
+      "group": "3"
+    },
+    {
+      "id": "fill-076",
+      "title": "No.76",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/76.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-077",
+      "title": "No.77",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/77.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-078",
+      "title": "No.78",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/78.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-079",
+      "title": "No.79",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/79.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-080",
+      "title": "No.80",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/80.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-081",
+      "title": "No.81",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/81.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-082",
+      "title": "No.82",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/82.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-083",
+      "title": "No.83",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/83.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-084",
+      "title": "No.84",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/84.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-085",
+      "title": "No.85",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/85.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-086",
+      "title": "No.86",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/86.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-087",
+      "title": "No.87",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/87.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-088",
+      "title": "No.88",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/88.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-089",
+      "title": "No.89",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/89.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-090",
+      "title": "No.90",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/90.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-091",
+      "title": "No.91",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/91.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-092",
+      "title": "No.92",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/92.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-093",
+      "title": "No.93",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/93.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-094",
+      "title": "No.94",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/94.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-095",
+      "title": "No.95",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/95.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-096",
+      "title": "No.96",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/96.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-097",
+      "title": "No.97",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/97.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-098",
+      "title": "No.98",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/98.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-099",
+      "title": "No.99",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/99.jpg",
+      "group": "4"
+    },
+    {
+      "id": "fill-100",
+      "title": "No.100",
+      "url": "https://daryls-drum-channel.net/wp-content/uploads/2022/08/100.jpg",
+      "group": "4"
+    }
+  ]
+}

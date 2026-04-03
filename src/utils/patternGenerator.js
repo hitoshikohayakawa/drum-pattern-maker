@@ -53,17 +53,15 @@ function createOrchestrationMap(accentPositions, orchestration) {
     }
 
     if (orchestration === 'tom') {
-      map[pos] = Math.random() < 0.5 ? 'tom' : 'floorTom'
+      map[pos] = 'altTom'
       return
     }
 
     const roll = Math.random()
     if (roll < 0.45) {
       map[pos] = 'crash'
-    } else if (roll < 0.75) {
-      map[pos] = 'tom'
     } else {
-      map[pos] = 'floorTom'
+      map[pos] = 'altTom'
     }
   })
 
@@ -80,8 +78,7 @@ function createCellPattern(difficulty, orchestration) {
   accentPositions.forEach((pos) => {
     const type = orchestrationMap[pos]
     if (type === 'crash') accentRow[pos] = '✕'
-    else if (type === 'tom') accentRow[pos] = '△'
-    else if (type === 'floorTom') accentRow[pos] = '▲'
+    else if (type === 'altTom') accentRow[pos] = '△'
     else accentRow[pos] = '＜'
   })
 

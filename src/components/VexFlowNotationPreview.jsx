@@ -29,17 +29,21 @@ function getBeamGroupFractions(vexflow, noteType, mode) {
   return [new Fraction(1, 4)]
 }
 
-function getVoice1Keys(symbol, mode) {
+function getVoice1Keys(symbol, mode, stepIndex = 0) {
   const keys = []
   const str = String(symbol || '')
+  const isRightHand = stepIndex % 2 === 0
   
   if (str.includes('✕') || str.includes('C')) keys.push('g/5/cx') // Crash/Cymbal
   if (str.includes('H') || str.includes('O')) keys.push('g/5/x2') // Hihat
   if (str.includes('R')) keys.push('f/5/x2') // Ride
   if (str.includes('S') || str.includes('＜')) keys.push('c/5') // Snare
-  if (str.includes('T') || str.includes('△')) keys.push('e/5') // Tom
+  if (str.includes('T')) keys.push('e/5') // Tom
   if (str.includes('M')) keys.push('d/5') // Mid Tom
-  if (str.includes('F') || str.includes('▲')) keys.push('a/4') // Floor Tom
+  if (str.includes('F')) keys.push('a/4') // Floor Tom
+  if (str.includes('△') || str.includes('▲')) {
+    keys.push(isRightHand ? 'a/4' : 'e/5')
+  }
 
   if (keys.length === 0 && mode === 'accent') {
     keys.push('c/5') // アクセント練習モードの空枠はゴーストスネアとして扱う
@@ -91,7 +95,7 @@ function getLargestSpan(startIndex, barStartIndex, maxSpanSteps, slots, getKeys,
 
     let valid = true
     for (let index = 1; index < span; index += 1) {
-      if (getKeys(slots[startIndex + index]).length > 0) {
+      if (getKeys(slots[startIndex + index], startIndex + index).length > 0) {
         valid = false
         break
       }
@@ -126,7 +130,7 @@ function buildVoiceData({
 
     while (stepIndex < barEndIndex) {
       const symbol = slots[stepIndex]
-      const keys = getKeys(symbol)
+      const keys = getKeys(symbol, stepIndex)
       const maxSpanSteps = barEndIndex - stepIndex
       const { span, duration } = preserveStepTiming
         ? { span: 1, duration: baseDuration }
@@ -267,7 +271,7 @@ export default function VexFlowNotationPreview({
           stepsPerBar,
           barCount,
           activeStepIndex,
-          getKeys: (sym) => getVoice1Keys(sym, mode),
+          getKeys: (sym, stepIndex) => getVoice1Keys(sym, mode, stepIndex),
           stemDirection: 1,
           baseDuration,
           mode,

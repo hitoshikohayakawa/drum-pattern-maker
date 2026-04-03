@@ -98,9 +98,11 @@ export function getKitConfig(kitLibrary, tomTone, floorTomTone) {
         midTom: 'tom-02.wav',
         floorTom: getTomFile(kitLibrary, floorTomPreset),
         hihat: 'hihat-closed.wav',
+        hihatOpen: 'hihat-open.wav',
         ride: 'ride-01.wav',
       },
       hihat: { rate: 1, volume: -8.5 },
+      hihatOpen: { rate: 1, volume: -6.5 },
       ride: { rate: 0.98, volume: -9 },
     }
   }
@@ -114,9 +116,11 @@ export function getKitConfig(kitLibrary, tomTone, floorTomTone) {
       midTom: 'tom2.mp3',
       floorTom: getTomFile(kitLibrary, floorTomPreset),
       hihat: 'hihat.mp3',
+      hihatOpen: 'hihat.mp3',
       ride: 'hihat.mp3',
     },
     hihat: { rate: 1.08, volume: -7 },
+    hihatOpen: { rate: 0.9, volume: -4.5 },
     ride: { rate: 1, volume: -8 },
   }
 }

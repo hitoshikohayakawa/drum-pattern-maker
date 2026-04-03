@@ -76,6 +76,9 @@ export const FILL_GROOVE_OPTIONS = [
   { value: 'straight', label: '基本8ビート' },
   { value: 'syncopated', label: 'シンコペ8ビート' },
   { value: 'ride', label: 'ライド8ビート' },
+  { value: 'shake', label: 'シェイクビート' },
+  { value: 'dance', label: 'ダンスビート' },
+  { value: 'soca', label: 'ソカ' },
 ]
 
 export const FILL_GENRE_OPTIONS = [

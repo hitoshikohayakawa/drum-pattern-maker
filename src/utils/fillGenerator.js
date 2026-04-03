@@ -23,14 +23,13 @@ function replaceHiHatWithOpen(symbol) {
 function maybeOpenHiHatInFill(fill, allowOpenHiHat) {
   if (!allowOpenHiHat || !fill?.hand) return fill
   const nextHand = [...fill.hand]
-  const candidateIndexes = []
+  let targetIndex = -1
 
   nextHand.forEach((symbol, index) => {
-    if (symbol === 'H' || symbol === 'HS') candidateIndexes.push(index)
+    if (symbol === 'H' || symbol === 'HS') targetIndex = index
   })
 
-  if (candidateIndexes.length) {
-    const targetIndex = randomPick(candidateIndexes)
+  if (targetIndex >= 0) {
     nextHand[targetIndex] = replaceHiHatWithOpen(nextHand[targetIndex])
     return { ...fill, hand: nextHand }
   }
@@ -41,7 +40,7 @@ function maybeOpenHiHatInFill(fill, allowOpenHiHat) {
 function maybeOpenHiHatInGrooveBar(accentRow, grooveKey, allowOpenHiHat) {
   if (!allowOpenHiHat || grooveKey === 'ride') return accentRow
   const nextAccentRow = [...accentRow]
-  const preferredIndexes = Math.random() < 0.5 ? [14] : [6, 14]
+  const preferredIndexes = [14]
 
   preferredIndexes.forEach((index) => {
     const symbol = nextAccentRow[index]
@@ -124,7 +123,12 @@ function getGenreProfile(fillGenre) {
 
 function getGenreGroovePool(fillGenre, grooveKey) {
   const genreProfile = getGenreProfile(fillGenre)
-  if (grooveKey === 'random') return genreProfile.groovePool
+  if (grooveKey === 'random') {
+    return [
+      ...genreProfile.groovePool,
+      ...Object.values(BASIC_EIGHT_BEAT_LIBRARY).flat(),
+    ]
+  }
   if (grooveKey === 'straight') return GENRE_GROOVE_LIBRARY[fillGenre] || genreProfile.groovePool
   return BASIC_EIGHT_BEAT_LIBRARY[grooveKey] || genreProfile.groovePool
 }

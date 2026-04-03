@@ -1,9 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import * as Tone from 'tone'
-import SvgNotationPreview from './components/SvgNotationPreview'
 import VexFlowNotationPreview from './components/VexFlowNotationPreview.jsx'
-import ImageNotationPreview from './components/ImageNotationPreview.jsx'
-import { getFillinImages } from './utils/fillinData.js'
 
 import {
   NOTE_OPTIONS,
@@ -16,7 +13,6 @@ import {
   FLOOR_TOM_TONE_OPTIONS,
   CYMBAL_TONE_OPTIONS,
   KIT_LIBRARY_OPTIONS,
-  NOTATION_ENGINE_OPTIONS,
   PRACTICE_MENU,
   FILL_GROOVE_OPTIONS,
   FILL_GENRE_OPTIONS,
@@ -64,14 +60,13 @@ export default function App() {
   const [cymbalTone, setCymbalTone] = useState('tight')
   const [kitReady, setKitReady] = useState(false)
   const [snareReady, setSnareReady] = useState(false)
-  const [notationEngine, setNotationEngine] = useState('svg')
 
   const patterns = useMemo(() => {
     return createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   }, [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
   const fillPatterns = useMemo(() => {
-    return createFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, notationEngine)
-  }, [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, notationEngine, refreshKey])
+    return createFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, 'vexflow')
+  }, [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey])
 
   const drumKitRef = useRef(null)
   const cymbalPlayerRef = useRef(null)
@@ -427,9 +422,10 @@ export default function App() {
       }
 
       if (hasOpenHiHatLayer) {
-        const hihat = drumKitRef.current?.player('hihat')
-        if (hihat) {
-          stopAndStartPlayer(hihat, time, 0.9, -4.5)
+        const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
+        const openHiHat = drumKitRef.current?.player('hihatOpen') || drumKitRef.current?.player('hihat')
+        if (openHiHat) {
+          stopAndStartPlayer(openHiHat, time, kitConfig.hihatOpen.rate, kitConfig.hihatOpen.volume)
         }
       }
 
@@ -542,15 +538,6 @@ export default function App() {
     })
   }, [fillPatterns])
 
-  const PreviewComponent =
-    notationEngine === 'vexflow'
-      ? VexFlowNotationPreview
-      : notationEngine === 'image'
-      ? ImageNotationPreview
-      : SvgNotationPreview
-
-  const allImages = useMemo(() => getFillinImages(), [])
-
   const practiceMenuButtons = PRACTICE_MENU.map((item) => (
     <button
       key={item.value}
@@ -563,6 +550,32 @@ export default function App() {
       {item.label}
     </button>
   ))
+
+  const actionPanelContent = (
+    <>
+      <div className="button-row">
+        <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
+        <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
+        <button onClick={handlePlay} disabled={isPlaying || !samplesReady}>再生</button>
+        <button onClick={handleStop} disabled={!isPlaying}>停止</button>
+      </div>
+
+      <div className="utility-row">
+        <label className="bpm-control">
+          <span>BPM</span>
+          <input
+            type="number"
+            min="40"
+            max="240"
+            value={bpm}
+            onChange={(e) => setBpm(Number(e.target.value))}
+          />
+        </label>
+
+        <button className="ghost-button" onClick={() => window.print()}>印刷 / PDF保存</button>
+      </div>
+    </>
+  )
 
   return (
     <div className="app">
@@ -592,6 +605,10 @@ export default function App() {
       </header>
 
       <div className="app-backdrop" />
+
+      <section className="mobile-action-panel no-print">
+        {actionPanelContent}
+      </section>
 
       <div className="workspace">
         <aside className={`settings-panel no-print ${isMenuOpen ? 'is-open' : ''}`}>
@@ -666,7 +683,7 @@ export default function App() {
                   </div>
 
                   <div className="control-item">
-                    <label>基本8ビート</label>
+                    <label>基本ビート</label>
                     <select value={fillGroove} onChange={(e) => setFillGroove(e.target.value)}>
                       {FILL_GROOVE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -758,39 +775,10 @@ export default function App() {
                   ))}
                 </select>
               </div>
-
-              <div className="control-item">
-                <label>楽譜エンジン</label>
-                <select value={notationEngine} onChange={(e) => setNotationEngine(e.target.value)}>
-                  {NOTATION_ENGINE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
             </section>
 
-            <section className="action-panel">
-              <div className="button-row">
-                <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
-                <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
-                <button onClick={handlePlay} disabled={isPlaying || !samplesReady}>再生</button>
-                <button onClick={handleStop} disabled={!isPlaying}>停止</button>
-              </div>
-
-              <div className="utility-row">
-                <label className="bpm-control">
-                  <span>BPM</span>
-                  <input
-                    type="number"
-                    min="40"
-                    max="240"
-                    value={bpm}
-                    onChange={(e) => setBpm(Number(e.target.value))}
-                  />
-                </label>
-
-                <button className="ghost-button" onClick={() => window.print()}>印刷 / PDF保存</button>
-              </div>
+            <section className="action-panel desktop-action-panel">
+              {actionPanelContent}
             </section>
           </div>
         </aside>
@@ -824,9 +812,8 @@ export default function App() {
             <div className="svg-preview-list">
               {practiceMode === 'accent' ? (
                 patterns.map((pattern, index) => {
-                  const url = allImages.find((img) => img.id === 'legend')?.url
                   return (
-                    <PreviewComponent
+                    <VexFlowNotationPreview
                       key={`preview-${refreshKey}-${index}`}
                       pattern={pattern}
                       noteType={noteType}
@@ -834,17 +821,13 @@ export default function App() {
                       mode="accent"
                       showAccentMarks
                       activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activePatternOffsets[index]}
-                      imageUrl={url}
                     />
                   )
                 })
               ) : (
                 fillPatterns.map((pattern, index) => {
-                  const patternNo = (index % 100) + 1
-                  const imageId = `fill-${String(patternNo).padStart(3, '0')}`
-                  const url = allImages.find((img) => img.id === imageId)?.url || allImages.find((img) => img.id === 'legend')?.url
                   return (
-                    <PreviewComponent
+                    <VexFlowNotationPreview
                       key={`fill-preview-${refreshKey}-${index}`}
                       pattern={pattern}
                       noteType="16th"
@@ -852,7 +835,6 @@ export default function App() {
                       mode="fillin"
                       showAccentMarks={false}
                       activeStepIndex={currentPlaybackStep == null ? null : currentPlaybackStep - activeFillPatternOffsets[index]}
-                      imageUrl={url}
                     />
                   )
                 })

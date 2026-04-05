@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import VexFlowNotationPreview from '../components/VexFlowNotationPreview.jsx'
+import VexFlowNotationPreview from '../components/vexflow-notation-preview.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useDrumPlaybackEngine } from '../hooks/useDrumPlaybackEngine'
 import {

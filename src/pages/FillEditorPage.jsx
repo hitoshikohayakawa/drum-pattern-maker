@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import VexFlowNotationPreview from '../components/VexFlowNotationPreview.jsx'
+import VexFlowNotationPreview from '../components/vexflow-notation-preview.jsx'
 import {
   CYMBAL_TONE_OPTIONS,
   FLOOR_TOM_TONE_OPTIONS,

@@ -5,8 +5,10 @@ import { useAuth } from './contexts/AuthContext.jsx'
 import FillEditorPage from './pages/FillEditorPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import OnboardingPage from './pages/OnboardingPage.jsx'
+import PrivacyPage from './pages/PrivacyPage.jsx'
 import PracticePage from './pages/PracticePage.jsx'
 import PublicFillsPage from './pages/PublicFillsPage.jsx'
+import TermsPage from './pages/TermsPage.jsx'
 import { getProfileInitial } from './utils/profileUtils'
 
 const ROUTES = [
@@ -32,6 +34,7 @@ export default function App() {
     signOut,
     user,
   } = useAuth()
+  const isAuthBypassRoute = pathname === '/login' || pathname === '/privacy' || pathname === '/terms'
 
   useEffect(() => {
     const handlePopState = () => {
@@ -54,7 +57,7 @@ export default function App() {
   useEffect(() => {
     if (isAuthLoading || isProfileLoading) return
 
-    if (!user && pathname !== '/login') {
+    if (!user && !isAuthBypassRoute) {
       navigate('/login', { force: true })
       return
     }
@@ -67,7 +70,7 @@ export default function App() {
     if (user && !needsOnboarding && (pathname === '/login' || pathname === '/onboarding')) {
       navigate('/', { force: true })
     }
-  }, [isAuthLoading, isProfileLoading, needsOnboarding, pathname, user])
+  }, [isAuthBypassRoute, isAuthLoading, isProfileLoading, needsOnboarding, pathname, user])
 
   useEffect(() => {
     if (!user) {
@@ -90,6 +93,14 @@ export default function App() {
 
     if (pathname === '/login') {
       return <LoginPage />
+    }
+
+    if (pathname === '/privacy') {
+      return <PrivacyPage />
+    }
+
+    if (pathname === '/terms') {
+      return <TermsPage />
     }
 
     if (pathname === '/onboarding') {
@@ -118,7 +129,7 @@ export default function App() {
           </div>
         </div>
 
-        {pathname === '/login' || pathname === '/onboarding' ? null : (
+        {pathname === '/login' || pathname === '/onboarding' || pathname === '/privacy' || pathname === '/terms' ? null : (
           <nav className="practice-nav route-nav">
             {ROUTES.map((route) => (
               <button

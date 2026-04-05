@@ -4,16 +4,19 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import { fileToDataUrl, getProfileDisplayName, getProfileInitial } from '../utils/profileUtils'
 
 export default function AccountSettingsModal({ isOpen, onClose }) {
-  const { profile, saveProfile, user } = useAuth()
+  const { deleteAccount, profile, saveProfile, user } = useAuth()
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     if (!isOpen) return
     setDisplayName(profile?.display_name || profile?.username || '')
     setAvatarUrl(profile?.avatar_url || '')
+    setShowDeleteConfirm(false)
     setErrorMessage('')
   }, [isOpen, profile])
 
@@ -63,6 +66,23 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
       setErrorMessage(error.message || 'アカウント設定の保存に失敗しました。')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true)
+    setErrorMessage('')
+
+    try {
+      await deleteAccount()
+      setShowDeleteConfirm(false)
+      onClose()
+      window.history.pushState({}, '', '/login')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    } catch (error) {
+      setErrorMessage(error.message || '退会処理に失敗しました。')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -120,7 +140,30 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
           </button>
         </form>
 
+        <button
+          type="button"
+          className="text-link-button account-danger-link"
+          onClick={() => setShowDeleteConfirm(true)}
+        >
+          サービスを退会する
+        </button>
+
         {errorMessage ? <p className="editor-error">{errorMessage}</p> : null}
+
+        {showDeleteConfirm ? (
+          <div className="inline-confirm-card">
+            <h3>本当に退会しますか？</h3>
+            <p>退会すると過去に作成・保存したデータはすべて消えてしまいます。</p>
+            <div className="inline-confirm-actions">
+              <button type="button" className="ghost-button" onClick={() => setShowDeleteConfirm(false)}>
+                キャンセル
+              </button>
+              <button type="button" className="danger-button" onClick={handleDeleteAccount} disabled={isDeleting}>
+                {isDeleting ? '退会処理中...' : '退会する'}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   )

@@ -58,6 +58,15 @@ export default function LoginPage() {
             Google アカウントで認証します。登録済みのアカウントならそのままログインされます。
           </p>
 
+          <div className="auth-legal-links">
+            <p>利用規約・プライバシーポリシーに同意の上ご利用ください</p>
+            <div className="auth-legal-link-row">
+              <a href="/terms">利用規約</a>
+              <span aria-hidden="true">｜</span>
+              <a href="/privacy">プライバシーポリシー</a>
+            </div>
+          </div>
+
           {!isSupabaseConfigured ? (
             <p className="editor-hint">Supabase 環境変数が未設定のため、認証を開始できません。</p>
           ) : null}
@@ -74,6 +83,12 @@ export default function LoginPage() {
             onStart={() => startGoogleFlow('signup')}
           />
         </div>
+
+        <footer className="auth-footer-links">
+          <a href="/terms">利用規約</a>
+          <span aria-hidden="true">｜</span>
+          <a href="/privacy">プライバシーポリシー</a>
+        </footer>
       </div>
     </main>
   )

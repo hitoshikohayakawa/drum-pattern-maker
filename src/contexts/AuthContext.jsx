@@ -168,6 +168,19 @@ export function AuthProvider({ children }) {
         const { error } = await supabase.auth.signOut()
         if (error) throw error
       },
+      deleteAccount: async () => {
+        if (!supabase || !user?.id) {
+          throw new Error('ログイン状態を確認できません。')
+        }
+
+        const { error } = await supabase.rpc('delete_my_account')
+        if (error) {
+          throw error
+        }
+
+        setProfile(null)
+        setSession(null)
+      },
     }
   }, [session, profile, isAuthLoading, isProfileLoading, authError])
 

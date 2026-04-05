@@ -166,6 +166,48 @@ button {
   text-align: center;
 }
 
+.auth-legal-links {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.auth-legal-links p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #8fa1c7;
+}
+
+.auth-legal-link-row,
+.auth-footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.auth-legal-link-row a,
+.auth-footer-links a {
+  font-size: 0.82rem;
+  color: #8fa1c7;
+  text-decoration: underline;
+}
+
+.auth-legal-link-row span,
+.auth-footer-links span {
+  font-size: 0.82rem;
+  color: #6e7fa4;
+}
+
+.auth-legal-link-row a:hover,
+.auth-footer-links a:hover {
+  color: var(--text-main);
+}
+
+.auth-footer-links {
+  padding-bottom: 16px;
+}
+
 .login-lp-stack {
   width: 100%;
   display: grid;
@@ -300,6 +342,50 @@ button {
 .lp-cta-button {
   width: 100%;
   margin-top: 8px;
+}
+
+.legal-shell {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.legal-card {
+  width: min(100%, 920px);
+  padding: 32px;
+  border: 1px solid var(--line-soft);
+  border-radius: 26px;
+  background: rgba(10, 18, 36, 0.88);
+  box-shadow: var(--shadow-lg);
+}
+
+.legal-card h1,
+.legal-card h2,
+.legal-card p,
+.legal-card li {
+  margin-top: 0;
+}
+
+.legal-card h1 {
+  margin-bottom: 20px;
+  font-size: 2rem;
+}
+
+.legal-card h2 {
+  margin-top: 26px;
+  margin-bottom: 10px;
+  font-size: 1.15rem;
+}
+
+.legal-card p,
+.legal-card li {
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+.legal-card ul {
+  margin: 0;
+  padding-left: 22px;
 }
 
 .auth-form {
@@ -442,6 +528,50 @@ button {
   color: var(--text-main);
   font-size: 1.4rem;
   line-height: 1;
+}
+
+.text-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9fb2d9;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+.account-danger-link {
+  margin-top: 14px;
+}
+
+.inline-confirm-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(255, 125, 149, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 95, 130, 0.08);
+}
+
+.inline-confirm-card h3,
+.inline-confirm-card p {
+  margin: 0;
+}
+
+.inline-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.danger-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff7d95 0%, #ff4d7a 100%);
+  color: #fff;
+  font-weight: 800;
 }
 
 .site-header {

@@ -97,6 +97,7 @@ export const FILL_LENGTH_OPTIONS = [
 export const FILL_PATTERN_OPTIONS = [
   { value: 'basic', label: '基本パターン' },
   { value: 'random', label: 'ランダム' },
+  { value: 'created', label: '作成したもの' },
 ]
 
 export const FILL_BAR_COUNT_OPTIONS = [

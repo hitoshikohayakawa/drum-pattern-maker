@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 
-function getDurationCode(noteType, mode) {
-  if (mode === 'fillin') return '16'
+function getDurationCode(noteType, mode, resolution = '16th') {
+  if (mode === 'fillin') return resolution === '32nd' ? '32' : '16'
   if (noteType === '4th') return '4'
   if (noteType === '8th') return '8'
   return '16'
 }
 
-function getStepCountForBar(noteType, mode) {
-  if (mode === 'fillin') return 16
+function getStepCountForBar(noteType, mode, resolution = '16th') {
+  if (mode === 'fillin') return resolution === '32nd' ? 32 : 16
   if (noteType === '4th') return 4
   if (noteType === '8th') return 8
   return 16
@@ -40,6 +40,7 @@ function getVoice1Keys(symbol, mode, stepIndex = 0) {
   if (str.includes('S') || str.includes('＜')) keys.push('c/5') // Snare
   if (str.includes('T')) keys.push('e/5') // Tom
   if (str.includes('M')) keys.push('d/5') // Mid Tom
+  if (str.includes('L')) keys.push('b/4') // Low Tom
   if (str.includes('F')) keys.push('a/4') // Floor Tom
   if (str.includes('△') || str.includes('▲')) {
     keys.push(isRightHand ? 'a/4' : 'e/5')
@@ -66,6 +67,12 @@ function createGhostNote(vexflow, duration) {
 }
 
 function getDurationForSpan(baseDuration, span) {
+  if (baseDuration === '32') {
+    if (span === 8) return '4'
+    if (span === 4) return '8'
+    if (span === 2) return '16'
+    return '32'
+  }
   if (baseDuration === '16') {
     if (span === 4) return '4'
     if (span === 2) return '8'
@@ -79,6 +86,7 @@ function getDurationForSpan(baseDuration, span) {
 }
 
 function getSpanCandidates(baseDuration) {
+  if (baseDuration === '32') return [8, 4, 2, 1]
   if (baseDuration === '16') return [4, 2, 1]
   if (baseDuration === '8') return [2, 1]
   return [1]
@@ -118,10 +126,14 @@ function buildVoiceData({
   baseDuration,
   mode,
   preserveStepTiming = false,
+  accentMarks = null,
+  restMarks = null,
 }) {
   const tickables = []
   const beamGroups = Array.from({ length: barCount }, () => [])
   const tickablesByBar = Array.from({ length: barCount }, () => [])
+  const accentNotesByBar = Array.from({ length: barCount }, () => [])
+  const noteEntriesByBar = Array.from({ length: barCount }, () => [])
   
   for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
     const barStartIndex = barIndex * stepsPerBar
@@ -131,6 +143,7 @@ function buildVoiceData({
     while (stepIndex < barEndIndex) {
       const symbol = slots[stepIndex]
       const keys = getKeys(symbol, stepIndex)
+      const isExplicitRest = Boolean(restMarks?.[stepIndex])
       const maxSpanSteps = barEndIndex - stepIndex
       const { span, duration } = preserveStepTiming
         ? { span: 1, duration: baseDuration }
@@ -161,26 +174,38 @@ function buildVoiceData({
           note.setStemLength(24)
         }
 
-        const isAct = activeStepIndex !== null && activeStepIndex >= stepIndex && activeStepIndex < stepIndex + span
-        if (isAct) {
-          note.setStyle({ fillStyle: '#9acd32', strokeStyle: '#9acd32' })
-        }
-
         if (stemDirection === 1) {
           const strSym = String(symbol || '')
           // アクセント練習モードまたは通常の明示的なアクセント記号がある場合
-          const isAccent = strSym === '＜' || strSym.includes('＜')
+          const isAccent = Boolean(accentMarks?.[stepIndex]) || strSym === '＜' || strSym.includes('＜')
           if (isAccent) {
-            note.addModifier(new Articulation('a>').setPosition(ModifierPosition.ABOVE), 0)
+            accentNotesByBar[barIndex].push(note)
           }
           if (strSym.includes('O')) {
-             note.addModifier(new Articulation('ah').setPosition(ModifierPosition.ABOVE), 0)
+             note.addModifier(
+               new Articulation('ah')
+                 .setPosition(ModifierPosition.ABOVE)
+                 .setYShift(-6),
+               0
+             )
           }
         }
 
         tickables.push(note)
         tickablesByBar[barIndex].push(note)
         beamGroups[barIndex].push(note)
+        noteEntriesByBar[barIndex].push({ note, start: stepIndex, end: stepIndex + span })
+      } else if (isExplicitRest) {
+        const { StaveNote } = vexflow
+        const restNote = new StaveNote({
+          keys: ['b/4'],
+          duration: `${duration}r`,
+          clef: 'percussion',
+          stem_direction: stemDirection,
+        })
+        tickables.push(restNote)
+        tickablesByBar[barIndex].push(restNote)
+        noteEntriesByBar[barIndex].push({ note: restNote, start: stepIndex, end: stepIndex + span })
       } else {
         const ghostNote = createGhostNote(vexflow, duration)
         tickables.push(ghostNote)
@@ -191,7 +216,7 @@ function buildVoiceData({
     }
   }
 
-  return { tickables, beamGroups, tickablesByBar }
+  return { tickables, beamGroups, tickablesByBar, accentNotesByBar, noteEntriesByBar }
 }
 
 export default function VexFlowNotationPreview({
@@ -199,8 +224,10 @@ export default function VexFlowNotationPreview({
   noteType,
   mode = 'accent',
   activeStepIndex = null,
+  fillResolution = '16th',
 }) {
   const containerRef = useRef(null)
+  const noteElementsRef = useRef([])
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
@@ -209,6 +236,7 @@ export default function VexFlowNotationPreview({
 
     let cancelled = false
     container.innerHTML = ''
+    noteElementsRef.current = []
     setErrorMessage('')
 
     async function renderPreview() {
@@ -221,8 +249,9 @@ export default function VexFlowNotationPreview({
         loadBravura()
         Flow.setMusicFont('Bravura')
 
-        const baseDuration = getDurationCode(noteType, mode)
-        const stepsPerBar = pattern.stepsPerBar || getStepCountForBar(noteType, mode)
+        const resolvedFillResolution = pattern.resolution || fillResolution
+        const baseDuration = getDurationCode(noteType, mode, resolvedFillResolution)
+        const stepsPerBar = pattern.stepsPerBar || getStepCountForBar(noteType, mode, resolvedFillResolution)
         const totalSteps = pattern.totalSteps || stepsPerBar
         const accentRow = (pattern.accentRow || []).slice(0, totalSteps)
         const kickRow = (pattern.kickRow || []).slice(0, totalSteps)
@@ -232,7 +261,7 @@ export default function VexFlowNotationPreview({
         const firstBarExtraWidth = 82
         const rightPadding = 28
         const interBarGap = 6
-        const minWidthPerBar = baseDuration === '16' ? 370 : baseDuration === '8' ? 250 : 190
+        const minWidthPerBar = baseDuration === '32' ? 620 : baseDuration === '16' ? 370 : baseDuration === '8' ? 250 : 190
         const minTotalWidth =
           leftPadding +
           firstBarExtraWidth +
@@ -242,8 +271,9 @@ export default function VexFlowNotationPreview({
         const containerWidth = container.parentElement.clientWidth || 1120
         const width = Math.max(minTotalWidth, containerWidth - 8)
         
-        const height = 212
-        const staveY = 50
+        const topPadding = mode === 'accent' ? 34 : 18
+        const height = mode === 'accent' ? 244 : 212
+        const staveY = mode === 'accent' ? 74 : 50
         const availableBarWidth =
           width -
           leftPadding -
@@ -265,16 +295,19 @@ export default function VexFlowNotationPreview({
           svg.style.height = 'auto'
         }
 
+        const renderActiveStepIndex = activeStepIndex
         const voice1Data = buildVoiceData({
           vexflow,
           slots: accentRow,
           stepsPerBar,
           barCount,
-          activeStepIndex,
+          activeStepIndex: renderActiveStepIndex,
           getKeys: (sym, stepIndex) => getVoice1Keys(sym, mode, stepIndex),
           stemDirection: 1,
           baseDuration,
           mode,
+          accentMarks: pattern.accentMarks || null,
+          restMarks: pattern.restMarks || null,
         })
 
         const voice2Data = buildVoiceData({
@@ -282,7 +315,7 @@ export default function VexFlowNotationPreview({
           slots: kickRow,
           stepsPerBar,
           barCount,
-          activeStepIndex,
+          activeStepIndex: renderActiveStepIndex,
           getKeys: getVoice2Keys,
           stemDirection: -1,
           baseDuration,
@@ -324,6 +357,27 @@ export default function VexFlowNotationPreview({
           voice2.draw(context, stave)
           beams.forEach((beam) => beam.setContext(context).draw())
 
+          ;[...voice1Data.noteEntriesByBar[barIndex], ...voice2Data.noteEntriesByBar[barIndex]].forEach(({ note, start, end }) => {
+            const element = note.getSVGElement?.()
+            if (element) {
+              noteElementsRef.current.push({ element, start, end })
+            }
+          })
+
+          const accentNotes = voice1Data.accentNotesByBar[barIndex]
+          if (accentNotes.length) {
+            context.save()
+            context.setFont('Arial', 18, '700')
+            context.setFillStyle('#111')
+            accentNotes.forEach((note) => {
+              const x = note.getAbsoluteX()
+              const y = Math.max(topPadding, Math.min(...note.getYs()) - 34)
+              const metrics = context.measureText('>')
+              context.fillText('>', x - metrics.width / 2, y)
+            })
+            context.restore()
+          }
+
           currentX += currentBarWidth + interBarGap
         }
       } catch (error) {
@@ -339,8 +393,22 @@ export default function VexFlowNotationPreview({
     return () => {
       cancelled = true
       container.innerHTML = ''
+      noteElementsRef.current = []
     }
-  }, [pattern, noteType, mode, activeStepIndex])
+  }, [pattern, noteType, mode, fillResolution])
+
+  useEffect(() => {
+    noteElementsRef.current.forEach(({ element, start, end }) => {
+      const isActive = activeStepIndex !== null && activeStepIndex >= start && activeStepIndex < end
+      element.setAttribute('opacity', isActive ? '1' : '1')
+      element.querySelectorAll('path, rect, ellipse, circle, line, polygon, polyline').forEach((node) => {
+        node.setAttribute('stroke', isActive ? '#9acd32' : '#111')
+        if (node.tagName !== 'line') {
+          node.setAttribute('fill', isActive ? '#9acd32' : '#111')
+        }
+      })
+    })
+  }, [activeStepIndex])
 
   if (errorMessage) {
     return (

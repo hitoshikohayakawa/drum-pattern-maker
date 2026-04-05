@@ -177,7 +177,7 @@ function createAccentPagePatterns(noteType, difficulty, fixedBars, orchestration
     }
   }
 
-  const barsPerRow = 2
+  const barsPerRow = 4
   const rowTotalSteps = barsPerRow * stepsPerBar
   const rowCount = TOTAL_BARS_PER_PAGE / barsPerRow
 

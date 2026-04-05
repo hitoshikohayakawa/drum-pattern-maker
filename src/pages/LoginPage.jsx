@@ -3,6 +3,7 @@ import { useState } from 'react'
 import CTASection from '../components/login/CTASection.jsx'
 import FeatureSection from '../components/login/FeatureSection.jsx'
 import HeroSection from '../components/login/HeroSection.jsx'
+import LoginShowcaseSection from '../components/login/LoginShowcaseSection.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function LoginPage() {
@@ -75,6 +76,7 @@ export default function LoginPage() {
         </section>
 
         <div className="login-lp-stack">
+          <LoginShowcaseSection />
           <HeroSection />
           <FeatureSection />
           <CTASection

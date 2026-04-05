@@ -370,7 +370,7 @@ export default function VexFlowNotationPreview({
             context.setFont('Arial', 18, '700')
             context.setFillStyle('#111')
             accentNotes.forEach((note) => {
-              const x = note.getAbsoluteX()
+              const x = typeof note.getStemX === 'function' ? note.getStemX() : note.getAbsoluteX()
               const y = Math.max(topPadding, Math.min(...note.getYs()) - 34)
               const metrics = context.measureText('>')
               context.fillText('>', x - metrics.width / 2, y)

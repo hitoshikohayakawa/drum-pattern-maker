@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
 
+import AccountSettingsModal from './components/AccountSettingsModal.jsx'
+import { useAuth } from './contexts/AuthContext.jsx'
 import FillEditorPage from './pages/FillEditorPage.jsx'
+import LoginPage from './pages/LoginPage.jsx'
+import OnboardingPage from './pages/OnboardingPage.jsx'
 import PracticePage from './pages/PracticePage.jsx'
+import PublicFillsPage from './pages/PublicFillsPage.jsx'
+import { getProfileInitial } from './utils/profileUtils'
 
 const ROUTES = [
   { path: '/', label: '練習メニュー' },
   { path: '/fill-editor', label: 'フィルインパターン作成' },
+  { path: '/community-fills', label: 'みんなのフィルイン' },
 ]
 
 function normalizePathname(pathname) {
@@ -16,6 +23,15 @@ function normalizePathname(pathname) {
 export default function App() {
   const [pathname, setPathname] = useState(() => normalizePathname(window.location.pathname))
   const [practiceMenuOpen, setPracticeMenuOpen] = useState(false)
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false)
+  const {
+    isAuthLoading,
+    isProfileLoading,
+    needsOnboarding,
+    profile,
+    signOut,
+    user,
+  } = useAuth()
 
   useEffect(() => {
     const handlePopState = () => {
@@ -27,12 +43,68 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const navigate = (nextPath) => {
+  const navigate = (nextPath, options = {}) => {
     const normalized = normalizePathname(nextPath)
-    if (normalized === pathname) return
+    if (normalized === pathname && !options.force) return
     window.history.pushState({}, '', normalized)
     setPathname(normalized)
     setPracticeMenuOpen(false)
+  }
+
+  useEffect(() => {
+    if (isAuthLoading || isProfileLoading) return
+
+    if (!user && pathname !== '/login') {
+      navigate('/login', { force: true })
+      return
+    }
+
+    if (user && needsOnboarding && pathname !== '/onboarding') {
+      navigate('/onboarding', { force: true })
+      return
+    }
+
+    if (user && !needsOnboarding && (pathname === '/login' || pathname === '/onboarding')) {
+      navigate('/', { force: true })
+    }
+  }, [isAuthLoading, isProfileLoading, needsOnboarding, pathname, user])
+
+  useEffect(() => {
+    if (!user) {
+      setAccountSettingsOpen(false)
+    }
+  }, [user])
+
+  const renderRoute = () => {
+    if (isAuthLoading || (user && isProfileLoading && pathname !== '/login')) {
+      return (
+        <main className="auth-shell">
+          <section className="auth-card">
+            <p className="panel-kicker">Session</p>
+            <h2>読み込み中</h2>
+            <p>ログイン状態を確認しています。</p>
+          </section>
+        </main>
+      )
+    }
+
+    if (pathname === '/login') {
+      return <LoginPage />
+    }
+
+    if (pathname === '/onboarding') {
+      return <OnboardingPage navigate={navigate} />
+    }
+
+    if (pathname === '/fill-editor') {
+      return <FillEditorPage navigate={navigate} />
+    }
+
+    if (pathname === '/community-fills') {
+      return <PublicFillsPage navigate={navigate} />
+    }
+
+    return <PracticePage isMenuOpen={practiceMenuOpen} setIsMenuOpen={setPracticeMenuOpen} />
   }
 
   return (
@@ -46,39 +118,84 @@ export default function App() {
           </div>
         </div>
 
-        <nav className="practice-nav route-nav">
-          {ROUTES.map((route) => (
-            <button
-              key={route.path}
-              className={`practice-tab ${pathname === route.path ? 'is-active' : ''}`}
-              onClick={() => navigate(route.path)}
-            >
-              {route.label}
-            </button>
-          ))}
-        </nav>
+        {pathname === '/login' || pathname === '/onboarding' ? null : (
+          <nav className="practice-nav route-nav">
+            {ROUTES.map((route) => (
+              <button
+                key={route.path}
+                className={`practice-tab ${pathname === route.path ? 'is-active' : ''}`}
+                onClick={() => navigate(route.path)}
+              >
+                {route.label}
+              </button>
+            ))}
+          </nav>
+        )}
 
-        {pathname === '/' ? (
-          <button
-            className={`menu-toggle ${practiceMenuOpen ? 'is-open' : ''}`}
-            onClick={() => setPracticeMenuOpen((prev) => !prev)}
-            aria-label="設定メニューを開く"
-            aria-expanded={practiceMenuOpen}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-        ) : null}
+        <div className="header-actions">
+          {user ? (
+            <>
+              <button
+                type="button"
+                className="auth-chip auth-chip-button"
+                onClick={() => setAccountSettingsOpen(true)}
+              >
+                <span className="auth-chip-avatar">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="プロフィールアイコン" />
+                  ) : (
+                    <span>{getProfileInitial(profile, user)}</span>
+                  )}
+                </span>
+                <span className="auth-chip-copy">
+                  <span className="auth-chip-label">Signed in</span>
+                  <strong>{profile?.display_name || profile?.username || user.email}</strong>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="auth-link-button"
+                onClick={async () => {
+                  await signOut()
+                  navigate('/login', { force: true })
+                }}
+              >
+                ログアウト
+              </button>
+            </>
+          ) : (
+            pathname === '/login' ? null : (
+              <button
+                type="button"
+                className="auth-link-button"
+                onClick={() => navigate('/login')}
+              >
+                ログイン
+              </button>
+            )
+          )}
+
+          {pathname === '/' ? (
+            <button
+              className={`menu-toggle ${practiceMenuOpen ? 'is-open' : ''}`}
+              onClick={() => setPracticeMenuOpen((prev) => !prev)}
+              aria-label="設定メニューを開く"
+              aria-expanded={practiceMenuOpen}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="app-backdrop" />
-
-      {pathname === '/fill-editor' ? (
-        <FillEditorPage />
-      ) : (
-        <PracticePage isMenuOpen={practiceMenuOpen} setIsMenuOpen={setPracticeMenuOpen} />
-      )}
+      {renderRoute()}
+      <AccountSettingsModal
+        isOpen={accountSettingsOpen}
+        onClose={() => setAccountSettingsOpen(false)}
+      />
     </div>
   )
 }

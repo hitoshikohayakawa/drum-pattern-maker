@@ -8,6 +8,7 @@ import {
   SNARE_TONE_OPTIONS,
   TOM_TONE_OPTIONS,
 } from '../constants/options'
+import { useAuth } from '../contexts/AuthContext.jsx'
 import { useDrumPlaybackEngine } from '../hooks/useDrumPlaybackEngine'
 import {
   FILL_EDITOR_INSTRUMENTS,
@@ -21,14 +22,12 @@ import {
   toggleAccentInFillSteps,
   toggleInstrumentInFillSteps,
 } from '../utils/fillEditorModel'
-import { getLocalOwnerUserId } from '../utils/localOwner'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
 
 const FIXED_FILL_META = {
   category: 'fill_in',
   time_signature: '4/4',
   notation_rule_set: 'dpm_jp_v1',
-  visibility: 'private',
 }
 
 function formatDate(value) {
@@ -46,7 +45,8 @@ function formatDate(value) {
   }
 }
 
-export default function FillEditorPage() {
+export default function FillEditorPage({ navigate }) {
+  const { profile, user } = useAuth()
   const [title, setTitle] = useState('My Fill Pattern')
   const [fillLengthType, setFillLengthType] = useState('full_bar')
   const [resolution, setResolution] = useState('16th')
@@ -63,7 +63,7 @@ export default function FillEditorPage() {
   const [isLoadingList, setIsLoadingList] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [includeInPractice, setIncludeInPractice] = useState(false)
-  const ownerUserId = useMemo(() => getLocalOwnerUserId(), [])
+  const [visibility, setVisibility] = useState('private')
 
   const notationPattern = useMemo(
     () => buildNotationPatternFromFillSteps(steps, fillLengthType, resolution),
@@ -98,7 +98,7 @@ export default function FillEditorPage() {
   }, [fillLengthType, resolution])
 
   const loadSavedPatterns = async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !user?.id) {
       setSavedPatterns([])
       return
     }
@@ -109,7 +109,7 @@ export default function FillEditorPage() {
     const { data, error } = await supabase
       .from('fill_patterns')
       .select('id, owner_user_id, title, description, category, fill_length_type, time_signature, resolution, notation_rule_set, visibility, include_in_practice, steps_json, created_at, updated_at')
-      .eq('owner_user_id', ownerUserId)
+      .eq('owner_user_id', user.id)
       .order('updated_at', { ascending: false })
 
     if (error) {
@@ -125,7 +125,7 @@ export default function FillEditorPage() {
 
   useEffect(() => {
     loadSavedPatterns()
-  }, [])
+  }, [user?.id])
 
   const handleReset = () => {
     stopPlayback()
@@ -135,6 +135,7 @@ export default function FillEditorPage() {
     setResolution('16th')
     setSteps(createEmptyFillSteps('full_bar', '16th'))
     setIncludeInPractice(false)
+    setVisibility('private')
   }
 
   const handleSave = async () => {
@@ -143,11 +144,17 @@ export default function FillEditorPage() {
       return
     }
 
+    if (!user?.id) {
+      setErrorMessage('保存にはログインが必要です。')
+      navigate('/login')
+      return
+    }
+
     setIsSaving(true)
     setErrorMessage('')
 
     const payload = {
-      owner_user_id: ownerUserId,
+      owner_user_id: user.id,
       title: title.trim() || 'Untitled Fill',
       description: '',
       category: FIXED_FILL_META.category,
@@ -155,13 +162,13 @@ export default function FillEditorPage() {
       time_signature: FIXED_FILL_META.time_signature,
       resolution,
       notation_rule_set: FIXED_FILL_META.notation_rule_set,
-      visibility: FIXED_FILL_META.visibility,
+      visibility,
       include_in_practice: includeInPractice,
       steps_json: steps,
     }
 
     const query = editingId
-      ? supabase.from('fill_patterns').update(payload).eq('id', editingId).select('id').single()
+      ? supabase.from('fill_patterns').update(payload).eq('id', editingId).eq('owner_user_id', user.id).select('id').single()
       : supabase.from('fill_patterns').insert(payload).select('id').single()
 
     const { data, error } = await query
@@ -186,17 +193,18 @@ export default function FillEditorPage() {
     setFillLengthType(nextLengthType)
     setResolution(nextResolution)
     setIncludeInPractice(Boolean(item.include_in_practice))
+    setVisibility(item.visibility || 'private')
     setSteps(parseStoredStepsJson(item.steps_json, nextLengthType, nextResolution))
   }
 
   const handleDeletePattern = async (id) => {
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured || !supabase || !user?.id) return
 
     const { error } = await supabase
       .from('fill_patterns')
       .delete()
       .eq('id', id)
-      .eq('owner_user_id', ownerUserId)
+      .eq('owner_user_id', user.id)
 
     if (error) {
       setErrorMessage(error.message)
@@ -206,6 +214,8 @@ export default function FillEditorPage() {
     if (editingId === id) handleReset()
     await loadSavedPatterns()
   }
+
+  const canSave = Boolean(user?.id && profile?.username && !isSaving)
 
   return (
     <div className="workspace">
@@ -303,27 +313,29 @@ export default function FillEditorPage() {
               />
             </div>
 
-            <div className="control-item control-item-checkbox">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={includeInPractice}
-                  onChange={(event) => setIncludeInPractice(event.target.checked)}
-                />
-                練習組み込み
-              </label>
-            </div>
           </section>
 
           <section className="action-panel desktop-action-panel">
             <div className="button-row">
               <button onClick={() => playSequence(playbackSequence, resolution)} disabled={isPlaying || !samplesReady}>再生</button>
               <button onClick={stopPlayback} disabled={!isPlaying}>停止</button>
-              <button onClick={handleSave} disabled={isSaving}>{editingId ? '更新保存' : '保存'}</button>
+              <button onClick={handleSave} disabled={!canSave}>{editingId ? '更新保存' : '保存'}</button>
               <button className="ghost-button" onClick={handleReset}>新規作成</button>
             </div>
           </section>
 
+          {!user ? (
+            <div className="auth-inline-card">
+              <p>保存と一覧表示はログイン後に有効になります。</p>
+              <button type="button" onClick={() => navigate('/login')}>ログインへ進む</button>
+            </div>
+          ) : null}
+          {user && !profile?.username ? (
+            <div className="auth-inline-card">
+              <p>保存を始める前にユーザー名登録が必要です。</p>
+              <button type="button" onClick={() => navigate('/onboarding')}>オンボーディングへ</button>
+            </div>
+          ) : null}
           {!isSupabaseConfigured ? (
             <p className="editor-hint">Supabase未設定のため、保存一覧はまだ無効です。</p>
           ) : null}
@@ -339,7 +351,7 @@ export default function FillEditorPage() {
             <div>分解能: {FILL_RESOLUTION_OPTIONS.find((item) => item.value === resolution)?.label}</div>
             <div>長さ: {FILL_LENGTH_OPTIONS.find((item) => item.value === fillLengthType)?.label}</div>
             <div>記譜ルール: dpm_jp_v1</div>
-            <div>保存: private</div>
+            <div>保存: {visibility === 'public' ? 'public' : 'private'}</div>
           </div>
 
           <div className="abc-section">
@@ -403,11 +415,13 @@ export default function FillEditorPage() {
           <section className="saved-patterns-card">
             <div className="fill-grid-header">
               <h3>保存済みフィルイン</h3>
-              <p>{isLoadingList ? '読み込み中...' : `${savedPatterns.length} 件`}</p>
+              <p>{!user ? 'ログイン後に表示' : isLoadingList ? '読み込み中...' : `${savedPatterns.length} 件`}</p>
             </div>
 
             <div className="saved-pattern-list">
-              {savedPatterns.length === 0 ? (
+              {!user ? (
+                <div className="saved-pattern-empty">保存済みフィルインを見るにはログインしてください。</div>
+              ) : savedPatterns.length === 0 ? (
                 <div className="saved-pattern-empty">保存済みフィルインはまだありません。</div>
               ) : (
                 savedPatterns.map((item) => (
@@ -417,6 +431,34 @@ export default function FillEditorPage() {
                       <p>更新日時: {formatDate(item.updated_at)}</p>
                       <p>長さ: {FILL_LENGTH_OPTIONS.find((option) => option.value === (item.fill_length_type || 'full_bar'))?.label} / 分解能: {FILL_RESOLUTION_OPTIONS.find((option) => option.value === (item.resolution || '16th'))?.label}</p>
                       <div className="saved-pattern-toggle-row">
+                        <span>公開</span>
+                        <button
+                          type="button"
+                          className={`toggle-switch ${item.visibility === 'public' ? 'is-on' : 'is-off'}`}
+                          aria-pressed={item.visibility === 'public'}
+                          aria-label={`公開設定を${item.visibility === 'public' ? '非公開' : '公開'}にする`}
+                          onClick={async () => {
+                            if (!supabase || !user?.id) return
+                            const nextVisibility = item.visibility === 'public' ? 'private' : 'public'
+                            const { error } = await supabase
+                              .from('fill_patterns')
+                              .update({ visibility: nextVisibility })
+                              .eq('id', item.id)
+                              .eq('owner_user_id', user.id)
+                            if (error) {
+                              setErrorMessage(error.message)
+                              return
+                            }
+                            if (editingId === item.id) {
+                              setVisibility(nextVisibility)
+                            }
+                            await loadSavedPatterns()
+                          }}
+                        >
+                          <span className="toggle-switch-thumb" />
+                        </button>
+                      </div>
+                      <div className="saved-pattern-toggle-row">
                         <span>練習組み込み</span>
                         <button
                           type="button"
@@ -424,13 +466,13 @@ export default function FillEditorPage() {
                           aria-pressed={item.include_in_practice}
                           aria-label={`練習組み込みを${item.include_in_practice ? 'オフ' : 'オン'}にする`}
                           onClick={async () => {
-                            if (!supabase) return
+                            if (!supabase || !user?.id) return
                             const nextValue = !item.include_in_practice
                             const { error } = await supabase
                               .from('fill_patterns')
                               .update({ include_in_practice: nextValue })
                               .eq('id', item.id)
-                              .eq('owner_user_id', ownerUserId)
+                              .eq('owner_user_id', user.id)
                             if (error) {
                               setErrorMessage(error.message)
                               return

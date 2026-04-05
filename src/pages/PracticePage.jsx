@@ -19,10 +19,10 @@ import {
   SNARE_TONE_OPTIONS,
   TOM_TONE_OPTIONS,
 } from '../constants/options'
+import { useAuth } from '../contexts/AuthContext.jsx'
 import { useDrumPlaybackEngine } from '../hooks/useDrumPlaybackEngine'
 import { createFillInPracticePatterns } from '../utils/fillGenerator'
 import { buildFillPhraseFromStoredPattern, buildSequenceFromPracticePatterns } from '../utils/fillEditorModel'
-import { getLocalOwnerUserId } from '../utils/localOwner'
 import { createPagePatterns } from '../utils/patternGenerator'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
 
@@ -47,10 +47,10 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   const [floorTomTone, setFloorTomTone] = useState('standard')
   const [cymbalTone, setCymbalTone] = useState('tight')
   const [practiceEnabledCustomFills, setPracticeEnabledCustomFills] = useState([])
-  const ownerUserId = useMemo(() => getLocalOwnerUserId(), [])
+  const { user } = useAuth()
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !user?.id) {
       setPracticeEnabledCustomFills([])
       return
     }
@@ -59,7 +59,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
       const { data, error } = await supabase
         .from('fill_patterns')
         .select('id, fill_length_type, resolution, include_in_practice, steps_json')
-        .eq('owner_user_id', ownerUserId)
+        .eq('owner_user_id', user.id)
         .eq('include_in_practice', true)
 
       if (error) {
@@ -72,7 +72,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
     }
 
     loadPracticeFills()
-  }, [ownerUserId, refreshKey])
+  }, [user?.id, refreshKey])
 
   const patterns = useMemo(() => (
     createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)

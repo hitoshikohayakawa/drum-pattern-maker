@@ -422,6 +422,16 @@ button {
   padding: 0 16px;
 }
 
+.auth-form select,
+.settings-select {
+  min-height: 54px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  padding: 0 16px;
+}
+
 .auth-form button,
 .auth-google-button,
 .auth-inline-card button {
@@ -588,6 +598,106 @@ button {
   font-weight: 800;
 }
 
+.settings-tab-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.settings-tab-button {
+  flex: 1 1 0;
+  min-height: 42px;
+  border: 1px solid rgba(145, 187, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.settings-tab-button.is-active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #53d6ff 0%, #58f0cf 100%);
+  color: #08111f;
+}
+
+.settings-language-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-language-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-language-copy h3,
+.share-card h3 {
+  margin: 0;
+}
+
+.settings-language-copy p,
+.share-card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.share-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid rgba(145, 187, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.share-copy-box {
+  width: 100%;
+  min-height: 110px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  padding: 14px 16px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.share-copy-button,
+.settings-language-panel button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #53d6ff 0%, #58f0cf 100%);
+  color: #08111f;
+  font-weight: 800;
+}
+
+.feedback-toggle-button {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.feedback-card {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid rgba(145, 187, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.feedback-textarea {
+  width: 100%;
+  min-height: 140px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  padding: 14px 16px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
 .site-header {
   position: sticky;
   top: 16px;
@@ -651,6 +761,34 @@ button {
   align-items: center;
   gap: 14px;
   margin-left: auto;
+}
+
+.header-language-shell {
+  display: flex;
+  align-items: center;
+}
+
+.header-language-select {
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.header-language-select span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header-language-select select {
+  height: 42px;
+  border: 1px solid rgba(145, 187, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
+  padding: 0 12px;
 }
 
 .auth-chip {
@@ -720,6 +858,21 @@ button {
 }
 
 .auth-link-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.settings-gear-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(145, 187, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.settings-gear-button:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -1133,6 +1286,18 @@ button {
     min-width: 0;
   }
 
+  .header-language-shell {
+    min-width: 0;
+  }
+
+  .header-language-select {
+    min-width: 118px;
+  }
+
+  .header-language-select span {
+    display: none;
+  }
+
   .auth-chip {
     flex: 0 1 auto;
     min-width: 0;
@@ -1259,6 +1424,15 @@ button {
     width: 100%;
     justify-self: stretch;
     justify-content: space-between;
+  }
+
+  .header-language-shell {
+    flex: 1 1 auto;
+  }
+
+  .header-language-select {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .mobile-action-panel {
@@ -1621,6 +1795,12 @@ button {
 
 .editor-error {
   color: #ff9db6;
+}
+
+.editor-success {
+  margin: 14px 0 0;
+  font-size: 0.92rem;
+  color: #8bf55d;
 }
 
 .community-shell {

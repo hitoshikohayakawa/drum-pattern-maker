@@ -5,9 +5,11 @@ import FeatureSection from '../components/login/FeatureSection.jsx'
 import HeroSection from '../components/login/HeroSection.jsx'
 import LoginShowcaseSection from '../components/login/LoginShowcaseSection.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import { useI18n } from '../contexts/I18nContext.jsx'
 
 export default function LoginPage() {
   const { authError, isSupabaseConfigured, signInWithGoogle } = useAuth()
+  const { t } = useI18n()
   const [pendingAction, setPendingAction] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -18,7 +20,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle()
     } catch (error) {
-      setErrorMessage(error.message || 'Google ログインに失敗しました。')
+      setErrorMessage(error.message || 'Google login failed.')
       setPendingAction('')
     }
   }
@@ -31,8 +33,8 @@ export default function LoginPage() {
       <div className="auth-page-stack">
         <section className="auth-card auth-card-login">
           <div className="auth-card-hero">
-            <p className="panel-kicker">Drum Practice Platform</p>
-            <h2>drum pattern maker</h2>
+            <p className="panel-kicker">{t('login.kicker')}</p>
+            <h2>{t('login.title')}</h2>
           </div>
 
           <div className="auth-action-stack">
@@ -42,7 +44,7 @@ export default function LoginPage() {
               onClick={() => startGoogleFlow('login')}
               disabled={isDisabled}
             >
-              {pendingAction === 'login' ? 'ログイン中...' : 'ログイン'}
+              {pendingAction === 'login' ? t('login.button.loggingIn') : t('login.button.login')}
             </button>
 
             <button
@@ -51,20 +53,20 @@ export default function LoginPage() {
               onClick={() => startGoogleFlow('signup')}
               disabled={isDisabled}
             >
-              {pendingAction === 'signup' ? '登録処理へ移動中...' : '新規会員登録'}
+              {pendingAction === 'signup' ? t('login.button.signingUp') : t('login.button.signup')}
             </button>
           </div>
 
           <p className="auth-footnote">
-            Google アカウントで認証します。登録済みのアカウントならそのままログインされます。
+            {t('login.footnote')}
           </p>
 
           <div className="auth-legal-links">
-            <p>利用規約・プライバシーポリシーに同意の上ご利用ください</p>
+            <p>{t('login.legal')}</p>
             <div className="auth-legal-link-row">
-              <a href="/terms">利用規約</a>
+              <a href="/terms">{t('login.terms')}</a>
               <span aria-hidden="true">｜</span>
-              <a href="/privacy">プライバシーポリシー</a>
+              <a href="/privacy">{t('login.privacy')}</a>
             </div>
           </div>
 
@@ -87,9 +89,9 @@ export default function LoginPage() {
         </div>
 
         <footer className="auth-footer-links">
-          <a href="/terms">利用規約</a>
+          <a href="/terms">{t('login.terms')}</a>
           <span aria-hidden="true">｜</span>
-          <a href="/privacy">プライバシーポリシー</a>
+          <a href="/privacy">{t('login.privacy')}</a>
         </footer>
       </div>
     </main>

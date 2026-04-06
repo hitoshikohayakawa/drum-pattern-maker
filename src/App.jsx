@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import AccountSettingsModal from './components/AccountSettingsModal.jsx'
 import { useAuth } from './contexts/AuthContext.jsx'
+import { useI18n } from './contexts/I18nContext.jsx'
 import FillEditorPage from './pages/FillEditorPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import OnboardingPage from './pages/OnboardingPage.jsx'
@@ -12,9 +13,9 @@ import TermsPage from './pages/TermsPage.jsx'
 import { getProfileInitial } from './utils/profileUtils'
 
 const ROUTES = [
-  { path: '/', label: '練習メニュー' },
-  { path: '/fill-editor', label: 'フィルインパターン作成' },
-  { path: '/community-fills', label: 'みんなのフィルイン' },
+  { path: '/', labelKey: 'app.route.practice' },
+  { path: '/fill-editor', labelKey: 'app.route.editor' },
+  { path: '/community-fills', labelKey: 'app.route.community' },
 ]
 
 function normalizePathname(pathname) {
@@ -34,6 +35,7 @@ export default function App() {
     signOut,
     user,
   } = useAuth()
+  const { t, language, languages, setLanguage } = useI18n()
   const isAuthBypassRoute = pathname === '/login' || pathname === '/privacy' || pathname === '/terms'
 
   useEffect(() => {
@@ -137,20 +139,30 @@ export default function App() {
                 className={`practice-tab ${pathname === route.path ? 'is-active' : ''}`}
                 onClick={() => navigate(route.path)}
               >
-                {route.label}
+                {t(route.labelKey)}
               </button>
             ))}
           </nav>
         )}
 
         <div className="header-actions">
+          {isAuthBypassRoute ? (
+            <div className="header-language-shell">
+              <label className="header-language-select">
+                <span>{language === 'ja' ? '言語' : 'Language'}</span>
+                <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+                  {languages.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
           {user ? (
             <>
-              <button
-                type="button"
-                className="auth-chip auth-chip-button"
-                onClick={() => setAccountSettingsOpen(true)}
-              >
+              <div className="auth-chip">
                 <span className="auth-chip-avatar">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt="プロフィールアイコン" />
@@ -159,9 +171,17 @@ export default function App() {
                   )}
                 </span>
                 <span className="auth-chip-copy">
-                  <span className="auth-chip-label">Signed in</span>
+                  <span className="auth-chip-label">{t('app.auth.signedIn')}</span>
                   <strong>{profile?.display_name || profile?.username || user.email}</strong>
                 </span>
+              </div>
+              <button
+                type="button"
+                className="settings-gear-button"
+                aria-label={t('app.auth.settings')}
+                onClick={() => setAccountSettingsOpen(true)}
+              >
+                ⚙
               </button>
               <button
                 type="button"
@@ -171,7 +191,7 @@ export default function App() {
                   navigate('/login', { force: true })
                 }}
               >
-                ログアウト
+                {t('app.auth.logout')}
               </button>
             </>
           ) : (
@@ -181,7 +201,7 @@ export default function App() {
                 className="auth-link-button"
                 onClick={() => navigate('/login')}
               >
-                ログイン
+                {t('app.auth.login')}
               </button>
             )
           )}

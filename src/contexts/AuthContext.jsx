@@ -10,7 +10,7 @@ async function fetchProfile(userId) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, created_at, updated_at')
+    .select('*')
     .eq('id', userId)
     .maybeSingle()
 
@@ -27,6 +27,27 @@ export function AuthProvider({ children }) {
   const [isAuthLoading, setIsAuthLoading] = useState(isSupabaseConfigured)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [authError, setAuthError] = useState('')
+
+  const persistProfile = async (payload) => {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(payload, { onConflict: 'id' })
+
+    if (!error) return
+
+    // Graceful fallback while environments are catching up with the language migration.
+    if (String(error.message || '').includes('preferred_language')) {
+      const fallbackPayload = { ...payload }
+      delete fallbackPayload.preferred_language
+      const retry = await supabase
+        .from('profiles')
+        .upsert(fallbackPayload, { onConflict: 'id' })
+      if (retry.error) throw retry.error
+      return
+    }
+
+    throw error
+  }
 
   const loadProfile = async (userId) => {
     if (!supabase || !userId) {
@@ -137,15 +158,10 @@ export function AuthProvider({ children }) {
           username,
           display_name: (payload?.display_name || username).trim(),
           avatar_url: payload?.avatar_url || '',
+          preferred_language: payload?.preferred_language || profile?.preferred_language || 'ja',
         }
 
-        const { error } = await supabase
-          .from('profiles')
-          .upsert(nextPayload, { onConflict: 'id' })
-
-        if (error) {
-          throw error
-        }
+        await persistProfile(nextPayload)
 
         await loadProfile(user.id)
       },

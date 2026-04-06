@@ -1,35 +1,39 @@
-const FEATURES = [
-  {
-    title: 'リズム練習生成',
-    description: 'アクセントやグルーヴの練習譜を自動生成して、毎日の基礎練を回し続けられます。',
-  },
-  {
-    title: 'フィルインエディタ',
-    description: '思いついたフィルをステップ入力で作成し、譜面表示と再生でそのまま確認できます。',
-  },
-  {
-    title: 'みんなのパターン共有',
-    description: '公開されたフィルを見て、聴いて、保存して、自分の練習に取り込めます。',
-  },
-]
-
-const DIFFERENTIATORS = [
-  '自動生成で無限に練習メニューを作れる',
-  '譜面と音を同時に確認できる',
-  'スマホでも使いやすいシンプル設計',
-  '公開フィルを保存して自分の練習へ流し込める',
-]
+import { useI18n } from '../../contexts/I18nContext.jsx'
 
 export default function FeatureSection() {
+  const { t } = useI18n()
+
+  const features = [
+    {
+      title: t('lp.features.card1.title'),
+      description: t('lp.features.card1.body'),
+    },
+    {
+      title: t('lp.features.card2.title'),
+      description: t('lp.features.card2.body'),
+    },
+    {
+      title: t('lp.features.card3.title'),
+      description: t('lp.features.card3.body'),
+    },
+  ]
+
+  const differentiators = [
+    t('lp.difference.item1'),
+    t('lp.difference.item2'),
+    t('lp.difference.item3'),
+    t('lp.difference.item4'),
+  ]
+
   return (
     <section className="lp-section lp-feature-section">
       <div className="lp-section-heading">
-        <p className="panel-kicker">What You Can Do</p>
-        <h3>ひと目でわかる、3つの使い方</h3>
+        <p className="panel-kicker">{t('lp.features.kicker')}</p>
+        <h3>{t('lp.features.title')}</h3>
       </div>
 
       <div className="lp-feature-grid">
-        {FEATURES.map((feature) => (
+        {features.map((feature) => (
           <article className="lp-feature-card" key={feature.title}>
             <h4>{feature.title}</h4>
             <p>{feature.description}</p>
@@ -38,10 +42,10 @@ export default function FeatureSection() {
       </div>
 
       <div className="lp-difference-card">
-        <p className="panel-kicker">Why It Feels Better</p>
-        <h4>練習が続きやすい理由</h4>
+        <p className="panel-kicker">{t('lp.difference.kicker')}</p>
+        <h4>{t('lp.difference.title')}</h4>
         <ul className="lp-difference-list">
-          {DIFFERENTIATORS.map((item) => (
+          {differentiators.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>

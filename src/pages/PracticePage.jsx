@@ -20,6 +20,7 @@ import {
   TOM_TONE_OPTIONS,
 } from '../constants/options'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import { useI18n } from '../contexts/I18nContext.jsx'
 import { useDrumPlaybackEngine } from '../hooks/useDrumPlaybackEngine'
 import { createFillInPracticePatterns } from '../utils/fillGenerator'
 import { buildFillPhraseFromStoredPattern, buildSequenceFromPracticePatterns } from '../utils/fillEditorModel'
@@ -48,6 +49,103 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   const [cymbalTone, setCymbalTone] = useState('tight')
   const [practiceEnabledCustomFills, setPracticeEnabledCustomFills] = useState([])
   const { user } = useAuth()
+  const { language } = useI18n()
+  const isJapanese = language === 'ja'
+  const localize = (ja, en) => (isJapanese ? ja : en)
+
+  const noteOptionLabel = (value) => ({
+    '4th': localize('4部音符', 'Quarter Notes'),
+    '8th': localize('8部音符', 'Eighth Notes'),
+    '16th': localize('16部音符', 'Sixteenth Notes'),
+  }[value] || value)
+
+  const difficultyLabel = (value) => ({
+    easy: localize('イージー', 'Easy'),
+    normal: localize('ノーマル', 'Normal'),
+    hard: localize('ハード', 'Hard'),
+  }[value] || value)
+
+  const barLabel = (value) => ({
+    '16': localize('16小節固定', '16 Bars'),
+    '8': localize('8小節固定', '8 Bars'),
+    '4': localize('4小節固定', '4 Bars'),
+    '2': localize('2小節固定', '2 Bars'),
+  }[value] || value)
+
+  const orchestrationLabel = (value) => ({
+    none: localize('なし', 'None'),
+    tom: localize('タム', 'Toms'),
+    tomCymbal: localize('タム・シンバル', 'Toms + Cymbals'),
+  }[value] || value)
+
+  const kickLabel = (value) => ({
+    none: localize('なし', 'None'),
+    '1': localize('1拍', 'Beat 1'),
+    '2': localize('2拍', 'Beat 2'),
+    '3': localize('3拍', 'Beat 3'),
+    '4': localize('4拍', 'Beat 4'),
+  }[value] || value)
+
+  const grooveLabel = (value) => ({
+    random: localize('ランダム（複数パターン）', 'Random'),
+    straight: localize('基本8ビート', 'Basic 8-Beat'),
+    syncopated: localize('シンコペ8ビート', 'Syncopated 8-Beat'),
+    ride: localize('ライド8ビート', 'Ride 8-Beat'),
+    shake: localize('シェイクビート', 'Shake Beat'),
+    dance: localize('ダンスビート', 'Dance Beat'),
+    soca: localize('ソカ', 'Soca'),
+  }[value] || value)
+
+  const fillLengthLabel = (value) => ({
+    '1bar': localize('1小節フィル', '1-Bar Fill'),
+    half: localize('0.5小節フィル', 'Half-Bar Fill'),
+    quarter: localize('0.25小節フィル', 'Quarter-Bar Fill'),
+  }[value] || value)
+
+  const fillPatternLabel = (value) => ({
+    basic: localize('基本パターン', 'Basic Patterns'),
+    random: localize('ランダム', 'Random'),
+    created: localize('作成したもの', 'Created by Me'),
+  }[value] || value)
+
+  const fillBarCountLabel = (value) => ({
+    '32': localize('32小節', '32 Bars'),
+    '16': localize('16小節', '16 Bars'),
+    '4': localize('4小節', '4 Bars'),
+  }[value] || value)
+
+  const fillGenreLabel = (value) => ({
+    rock: 'ROCK',
+    pops: 'POPS',
+    blues: 'Blues',
+    jazz: 'JAZZ',
+  }[value] || value)
+
+  const snareToneLabel = (value) => ({
+    maple: localize('メープル（ウォーム）', 'Maple (Warm)'),
+    bright: localize('ブライト', 'Bright'),
+    fat: localize('ファット', 'Fat'),
+  }[value] || value)
+
+  const tomToneLabel = (value) => ({
+    standard: localize('スタンダード', 'Standard'),
+    tight: localize('タイト（高め）', 'Tight (High)'),
+    deep: localize('ディープ（低め）', 'Deep (Low)'),
+  }[value] || value)
+
+  const floorTomToneLabel = tomToneLabel
+
+  const cymbalToneLabel = (value) => ({
+    tight: localize('タイト', 'Tight'),
+    open: localize('オープン寄り', 'Open'),
+    dark: localize('ダーク', 'Dark'),
+  }[value] || value)
+
+  const kitLibraryLabel = (value) => ({
+    pearlMaster: 'Pearl Master Studio',
+    webStandard: localize('Web標準キット', 'Web Standard Kit'),
+  }[value] || value)
+  const noteTypeMetaLabel = noteOptionLabel(noteType)
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !user?.id) {
@@ -163,17 +261,17 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
         setIsMenuOpen(false)
       }}
     >
-      {item.label}
+      {item.value === 'accent' ? localize('アクセント練習', 'Accent Practice') : localize('フィルイン練習', 'Fill Practice')}
     </button>
   ))
 
   const actionPanelContent = (
     <>
       <div className="button-row">
-        <button onClick={() => setRefreshKey((prev) => prev + 1)}>生成</button>
-        <button onClick={() => setRefreshKey((prev) => prev + 1)}>再生成</button>
-        <button onClick={() => playSequence(playbackSteps, practiceMode === 'fillin' ? '16th' : noteType)} disabled={isPlaying || !samplesReady}>再生</button>
-        <button onClick={stopPlayback} disabled={!isPlaying}>停止</button>
+        <button onClick={() => setRefreshKey((prev) => prev + 1)}>{localize('生成', 'Generate')}</button>
+        <button onClick={() => setRefreshKey((prev) => prev + 1)}>{localize('再生成', 'Regenerate')}</button>
+        <button onClick={() => playSequence(playbackSteps, practiceMode === 'fillin' ? '16th' : noteType)} disabled={isPlaying || !samplesReady}>{localize('再生', 'Play')}</button>
+        <button onClick={stopPlayback} disabled={!isPlaying}>{localize('停止', 'Stop')}</button>
       </div>
 
       <div className="utility-row">
@@ -188,7 +286,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
           />
         </label>
 
-        <button className="ghost-button" onClick={() => window.print()}>印刷 / PDF保存</button>
+        <button className="ghost-button" onClick={() => window.print()}>{localize('印刷 / PDF保存', 'Print / Save PDF')}</button>
       </div>
     </>
   )
@@ -206,10 +304,10 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
               {practiceMenuButtons}
             </div>
 
-            <div className="panel-intro">
+          <div className="panel-intro">
               <p className="panel-kicker">{practiceMode === 'accent' ? 'Accent Lab' : 'Fill Lab'}</p>
-              <h2>{practiceMode === 'accent' ? 'アクセント練習を組み立てる' : 'フィルイン練習をデザインする'}</h2>
-              <p>音価、ジャンル、音色を調整して、印刷しやすいドラム譜へ整えます。</p>
+              <h2>{practiceMode === 'accent' ? localize('アクセント練習を組み立てる', 'Build Accent Practice') : localize('フィルイン練習をデザインする', 'Design Fill Practice')}</h2>
+              <p>{localize('音価、ジャンル、音色を調整して、印刷しやすいドラム譜へ整えます。', 'Adjust note values, genres, and tones to shape printable drum notation.')}</p>
             </div>
 
             <div className="practice-nav practice-nav-inline">
@@ -220,46 +318,46 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
               {practiceMode === 'accent' ? (
                 <>
                   <div className="control-item">
-                    <label>音符パターン</label>
+                    <label>{localize('音符パターン', 'Note Pattern')}</label>
                     <select value={noteType} onChange={(event) => setNoteType(event.target.value)}>
                       {NOTE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{noteOptionLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>難易度</label>
+                    <label>{localize('難易度', 'Difficulty')}</label>
                     <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
                       {DIFFICULTY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{difficultyLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>固定小節</label>
+                    <label>{localize('固定小節', 'Bars')}</label>
                     <select value={bars} onChange={(event) => setBars(event.target.value)}>
                       {BAR_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{barLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>タム・シンバル構成</label>
+                    <label>{localize('タム・シンバル構成', 'Tom / Cymbal Layout')}</label>
                     <select value={orchestration} onChange={(event) => setOrchestration(event.target.value)}>
                       {ORCHESTRATION_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{orchestrationLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>キック設定</label>
+                    <label>{localize('キック設定', 'Kick Pattern')}</label>
                     <select value={kickSetting} onChange={(event) => setKickSetting(event.target.value)}>
                       {KICK_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{kickLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
@@ -267,58 +365,58 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
               ) : (
                 <>
                   <div className="control-item">
-                    <label>ジャンル</label>
+                    <label>{localize('ジャンル', 'Genre')}</label>
                     <select value={fillGenre} onChange={(event) => setFillGenre(event.target.value)}>
                       {FILL_GENRE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{fillGenreLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>基本ビート</label>
+                    <label>{localize('基本ビート', 'Base Groove')}</label>
                     <select value={fillGroove} onChange={(event) => setFillGroove(event.target.value)}>
                       {FILL_GROOVE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{grooveLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>フィル長</label>
+                    <label>{localize('フィル長', 'Fill Length')}</label>
                     <select value={fillLengthMode} onChange={(event) => setFillLengthMode(event.target.value)}>
                       {FILL_LENGTH_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{fillLengthLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>フィルパターン</label>
+                    <label>{localize('フィルパターン', 'Fill Pattern')}</label>
                     <select value={fillPatternMode} onChange={(event) => setFillPatternMode(event.target.value)}>
                       {FILL_PATTERN_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{fillPatternLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item">
-                    <label>生成小節数</label>
+                    <label>{localize('生成小節数', 'Generated Bars')}</label>
                     <select value={fillBarCount} onChange={(event) => setFillBarCount(event.target.value)}>
                       {FILL_BAR_COUNT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{fillBarCountLabel(option.value)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="control-item control-item-checkbox">
                     <label>
-                      <span>ハイハットオープン</span>
+                      <span>{localize('ハイハットオープン', 'Open Hi-Hat')}</span>
                       <button
                         type="button"
                         className={`toggle-switch ${fillOpenHiHat ? 'is-on' : 'is-off'}`}
                         aria-pressed={fillOpenHiHat}
-                        aria-label={`ハイハットオープンを${fillOpenHiHat ? 'オフ' : 'オン'}にする`}
+                        aria-label={fillOpenHiHat ? localize('ハイハットオープンをオフにする', 'Turn open hi-hat off') : localize('ハイハットオープンをオンにする', 'Turn open hi-hat on')}
                         onClick={() => setFillOpenHiHat((prev) => !prev)}
                       >
                         <span className="toggle-switch-thumb" />
@@ -329,46 +427,46 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
               )}
 
               <div className="control-item">
-                <label>音源ライブラリ</label>
+                <label>{localize('音源ライブラリ', 'Kit Library')}</label>
                 <select value={kitLibrary} onChange={(event) => setKitLibrary(event.target.value)}>
                   {KIT_LIBRARY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>{kitLibraryLabel(option.value)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="control-item">
-                <label>スネア音色</label>
+                <label>{localize('スネア音色', 'Snare Tone')}</label>
                 <select value={snareTone} onChange={(event) => setSnareTone(event.target.value)}>
                   {SNARE_TONE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>{snareToneLabel(option.value)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="control-item">
-                <label>タム音色</label>
+                <label>{localize('タム音色', 'Tom Tone')}</label>
                 <select value={tomTone} onChange={(event) => setTomTone(event.target.value)}>
                   {TOM_TONE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>{tomToneLabel(option.value)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="control-item">
-                <label>フロアタム音色</label>
+                <label>{localize('フロアタム音色', 'Floor Tom Tone')}</label>
                 <select value={floorTomTone} onChange={(event) => setFloorTomTone(event.target.value)}>
                   {FLOOR_TOM_TONE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>{floorTomToneLabel(option.value)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="control-item">
-                <label>シンバル音色</label>
+                <label>{localize('シンバル音色', 'Cymbal Tone')}</label>
                 <select value={cymbalTone} onChange={(event) => setCymbalTone(event.target.value)}>
                   {CYMBAL_TONE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>{cymbalToneLabel(option.value)}</option>
                   ))}
                 </select>
               </div>
@@ -385,28 +483,28 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
             <div className="sheet-meta sheet-meta-outside no-print">
               {practiceMode === 'accent' ? (
                 <>
-                  <div>音符: {NOTE_OPTIONS.find((item) => item.value === noteType)?.label}</div>
-                  <div>難易度: {DIFFICULTY_OPTIONS.find((item) => item.value === difficulty)?.label}</div>
-                  <div>固定小節: {BAR_OPTIONS.find((item) => item.value === bars)?.label}</div>
-                  <div>構成: {ORCHESTRATION_OPTIONS.find((item) => item.value === orchestration)?.label}</div>
-                  <div>キック: {KICK_OPTIONS.find((item) => item.value === kickSetting)?.label}</div>
+                  <div>{localize('音符', 'Notes')}: {noteTypeMetaLabel}</div>
+                  <div>{localize('難易度', 'Difficulty')}: {difficultyLabel(difficulty)}</div>
+                  <div>{localize('固定小節', 'Bars')}: {barLabel(bars)}</div>
+                  <div>{localize('構成', 'Layout')}: {orchestrationLabel(orchestration)}</div>
+                  <div>{localize('キック', 'Kick')}: {kickLabel(kickSetting)}</div>
                 </>
               ) : (
                 <>
-                  <div>モード: フィルイン練習</div>
-                  <div>ジャンル: {FILL_GENRE_OPTIONS.find((item) => item.value === fillGenre)?.label}</div>
-                  <div>基本ビート: {FILL_GROOVE_OPTIONS.find((item) => item.value === fillGroove)?.label}</div>
-                  <div>フィル長: {FILL_LENGTH_OPTIONS.find((item) => item.value === fillLengthMode)?.label}</div>
-                  <div>フィルパターン: {FILL_PATTERN_OPTIONS.find((item) => item.value === fillPatternMode)?.label}</div>
-                  <div>生成小節数: {FILL_BAR_COUNT_OPTIONS.find((item) => item.value === fillBarCount)?.label}</div>
-                  <div>ハイハットオープン: {fillOpenHiHat ? 'あり' : 'なし'}</div>
+                  <div>{localize('モード', 'Mode')}: {localize('フィルイン練習', 'Fill Practice')}</div>
+                  <div>{localize('ジャンル', 'Genre')}: {fillGenreLabel(fillGenre)}</div>
+                  <div>{localize('基本ビート', 'Base Groove')}: {grooveLabel(fillGroove)}</div>
+                  <div>{localize('フィル長', 'Fill Length')}: {fillLengthLabel(fillLengthMode)}</div>
+                  <div>{localize('フィルパターン', 'Fill Pattern')}: {fillPatternLabel(fillPatternMode)}</div>
+                  <div>{localize('生成小節数', 'Generated Bars')}: {fillBarCountLabel(fillBarCount)}</div>
+                  <div>{localize('ハイハットオープン', 'Open Hi-Hat')}: {fillOpenHiHat ? localize('あり', 'On') : localize('なし', 'Off')}</div>
                 </>
               )}
             </div>
 
             <div className={`sheet-paper practice-sheet-paper ${practiceMode === 'accent' ? 'is-accent-mode' : 'is-fillin-mode'}`}>
             <div className="abc-section practice-score-section">
-              <h2>{practiceMode === 'accent' ? 'Accent Score' : 'Fill-In Score'}</h2>
+              <h2>{practiceMode === 'accent' ? localize('アクセント譜', 'Accent Score') : localize('フィルイン譜', 'Fill-In Score')}</h2>
               <div className="svg-preview-list">
                 {practiceMode === 'accent' ? (
                   patterns.map((pattern, index) => (

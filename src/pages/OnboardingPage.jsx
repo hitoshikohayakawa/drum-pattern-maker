@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { LANGUAGE_OPTIONS } from '../constants/i18n.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import { useI18n } from '../contexts/I18nContext.jsx'
 import { fileToDataUrl, getProfileInitial, normalizeUsername } from '../utils/profileUtils'
 
 export default function OnboardingPage({ navigate }) {
   const { profile, saveProfile, user } = useAuth()
+  const { language, setLanguage, t } = useI18n()
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [preferredLanguage, setPreferredLanguage] = useState(language)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -30,6 +34,7 @@ export default function OnboardingPage({ navigate }) {
     setUsername((current) => current || suggestedUsername)
     setDisplayName((current) => current || suggestedDisplayName)
     setAvatarUrl((current) => current || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '')
+    setPreferredLanguage((current) => current || profile?.preferred_language || language)
   }, [profile, suggestedUsername, suggestedDisplayName, user, navigate])
 
   const handleAvatarChange = async (event) => {
@@ -77,7 +82,9 @@ export default function OnboardingPage({ navigate }) {
         username: normalizedUsername,
         display_name: displayName.trim() || normalizedUsername,
         avatar_url: avatarUrl,
+        preferred_language: preferredLanguage,
       })
+      setLanguage(preferredLanguage)
       navigate('/')
     } catch (error) {
       setErrorMessage(
@@ -98,9 +105,9 @@ export default function OnboardingPage({ navigate }) {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <p className="panel-kicker">First Setup</p>
-        <h2>アカウントを設定</h2>
-        <p>初回ログインの設定です。表示名とアイコンはあとから変更できます。</p>
+        <p className="panel-kicker">{t('onboarding.kicker')}</p>
+        <h2>{t('onboarding.title')}</h2>
+        <p>{t('onboarding.body')}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="avatar-editor">
@@ -109,18 +116,18 @@ export default function OnboardingPage({ navigate }) {
             </div>
             <div className="avatar-editor-actions">
               <label className="file-upload-button">
-                画像を選択
+                {t('settings.profile.avatarSelect')}
                 <input type="file" accept="image/*" onChange={handleAvatarChange} />
               </label>
               {avatarUrl ? (
                 <button type="button" className="ghost-button" onClick={() => setAvatarUrl('')}>
-                  画像を外す
+                  {t('settings.profile.avatarRemove')}
                 </button>
               ) : null}
             </div>
           </div>
 
-          <label htmlFor="username">ユーザー名</label>
+          <label htmlFor="username">{t('onboarding.username')}</label>
           <input
             id="username"
             type="text"
@@ -129,9 +136,9 @@ export default function OnboardingPage({ navigate }) {
             placeholder="your_name"
             autoComplete="username"
           />
-          <p className="editor-hint">英数字と `_` のみ、24文字までです。</p>
+          <p className="editor-hint">{t('onboarding.usernameHint')}</p>
 
-          <label htmlFor="display-name">表示名</label>
+          <label htmlFor="display-name">{t('onboarding.displayName')}</label>
           <input
             id="display-name"
             type="text"
@@ -140,8 +147,24 @@ export default function OnboardingPage({ navigate }) {
             placeholder="表示名"
           />
 
+          <label htmlFor="preferred-language">{t('onboarding.language')}</label>
+          <select
+            id="preferred-language"
+            value={preferredLanguage}
+            onChange={(event) => {
+              setPreferredLanguage(event.target.value)
+              setLanguage(event.target.value)
+            }}
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? '保存中...' : '保存してはじめる'}
+            {isSubmitting ? t('onboarding.saving') : t('onboarding.save')}
           </button>
         </form>
 

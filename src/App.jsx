@@ -36,6 +36,7 @@ function AppShell() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const { authError, isAuthLoading, isProfileLoading, needsOnboarding, profile, signOut, user } = useAuth()
   const { language, languages, setLanguage, t } = useI18n()
+  const canUseAppNavigation = Boolean(user && !needsOnboarding)
 
   const applyRoute = (nextPath, replace = false) => {
     const normalized = normalizePathname(nextPath)
@@ -74,7 +75,7 @@ function AppShell() {
   useEffect(() => {
     if (isAuthLoading || isProfileLoading) return
 
-    if (!user && pathname === '/onboarding') {
+    if (!user && pathname !== '/login' && !LEGAL_ROUTES.has(pathname)) {
       applyRoute('/login', true)
       return
     }
@@ -133,29 +134,33 @@ function AppShell() {
           </div>
         </div>
 
-        <button
-          type="button"
-          className={`menu-toggle ${isMenuOpen ? 'is-open' : ''}`}
-          onClick={() => setIsMenuOpen((current) => !current)}
-          aria-label="Toggle menu"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-
-        <nav className="practice-nav route-nav">
-          {routeItems.map((item) => (
+        {canUseAppNavigation ? (
+          <>
             <button
-              key={item.path}
               type="button"
-              className={`practice-tab ${pathname === item.path ? 'is-active' : ''}`}
-              onClick={() => navigate(item.path)}
+              className={`menu-toggle ${isMenuOpen ? 'is-open' : ''}`}
+              onClick={() => setIsMenuOpen((current) => !current)}
+              aria-label="Toggle menu"
             >
-              {item.label}
+              <span />
+              <span />
+              <span />
             </button>
-          ))}
-        </nav>
+
+            <nav className="practice-nav route-nav">
+              {routeItems.map((item) => (
+                <button
+                  key={item.path}
+                  type="button"
+                  className={`practice-tab ${pathname === item.path ? 'is-active' : ''}`}
+                  onClick={() => navigate(item.path)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </>
+        ) : null}
 
         <div className="header-actions">
           <div className="header-language-shell">

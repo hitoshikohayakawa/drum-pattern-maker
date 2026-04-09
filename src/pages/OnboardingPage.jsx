@@ -34,8 +34,11 @@ export default function OnboardingPage({ navigate }) {
     setUsername((current) => current || suggestedUsername)
     setDisplayName((current) => current || suggestedDisplayName)
     setAvatarUrl((current) => current || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '')
-    setPreferredLanguage((current) => current || profile?.preferred_language || language)
   }, [profile, suggestedUsername, suggestedDisplayName, user, navigate])
+
+  useEffect(() => {
+    setPreferredLanguage(profile?.preferred_language || language)
+  }, [profile?.preferred_language, language])
 
   const handleAvatarChange = async (event) => {
     const file = event.target.files?.[0]

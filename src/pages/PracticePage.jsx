@@ -28,6 +28,7 @@ import {
   buildNotationPatternsFromCanonicalPatterns,
   buildPlaybackSequenceFromCanonicalPatterns,
 } from '../utils/fillEditorModel'
+import { resolutionFromGridProfile } from '../constants/rhythmSchema.js'
 import { createCanonicalPagePatterns } from '../utils/patternGenerator'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
 
@@ -211,7 +212,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   ), [canonicalFillPatterns])
 
   const fillPlaybackResolution = useMemo(
-    () => canonicalFillPatterns[0]?.resolution || '16th',
+    () => resolutionFromGridProfile(canonicalFillPatterns[0]?.gridProfile || 'straight_16'),
     [canonicalFillPatterns]
   )
 
@@ -223,15 +224,6 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
       return start
     })
   }, [notationPatterns])
-
-  const activeFillPatternOffsets = useMemo(() => {
-    let offset = 0
-    return notationFillPatterns.map((pattern) => {
-      const start = offset
-      offset += pattern.totalSteps || 0
-      return start
-    })
-  }, [notationFillPatterns])
 
   const playbackSteps = useMemo(() => (
     buildPlaybackSequenceFromCanonicalPatterns(
@@ -571,15 +563,13 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
                     />
                   ))
                 ) : (
-                  notationFillPatterns.map((pattern, index) => (
-                    <VexFlowNotationPreview
-                      key={`fill-preview-${refreshKey}-${index}`}
-                      pattern={pattern}
-                      noteType="16th"
-                      mode="fillin"
-                      activeStepIndex={currentStep == null ? null : currentStep - activeFillPatternOffsets[index]}
-                    />
-                  ))
+                  <VexFlowNotationPreview
+                    key={`fill-preview-${refreshKey}`}
+                    patterns={notationFillPatterns}
+                    noteType="16th"
+                    mode="fillin"
+                    activeStepIndex={currentStep}
+                  />
                 )}
               </div>
             </div>

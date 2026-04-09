@@ -161,7 +161,6 @@ export function buildPlaybackSequenceFromFillSteps(
 export function buildFillPhraseFromStoredPattern(patternRecord) {
   const fillLengthType = patternRecord?.fill_length_type || 'full_bar'
   const resolution = patternRecord?.resolution || '16th'
-  if (resolution !== '16th') return null
 
   const notationPattern = buildNotationPatternFromStoredPatternRecord(
     patternRecord,

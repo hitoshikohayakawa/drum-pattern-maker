@@ -22,24 +22,85 @@ const LOWER_VOICE_FOOT_HIHAT = 'P'
 const JAZZ_DEFAULT_STYLE = 'standard_jazz'
 const DEFAULT_GROOVE_LOCK_MODE = '4bars'
 
+const FILL_RESOLUTION_WEIGHTS_BY_GENRE = Object.freeze({
+  rock: Object.freeze([
+    { resolution: '16th', weight: 9 },
+    { resolution: '8th_triplet', weight: 3 },
+    { resolution: '16th_triplet', weight: 1 },
+  ]),
+  pops: Object.freeze([
+    { resolution: '16th', weight: 8 },
+    { resolution: '8th_triplet', weight: 4 },
+    { resolution: '16th_triplet', weight: 2 },
+  ]),
+  blues: Object.freeze([
+    { resolution: '8th_triplet', weight: 9 },
+    { resolution: '16th_triplet', weight: 3 },
+    { resolution: '16th', weight: 1 },
+  ]),
+  jazz: Object.freeze([
+    { resolution: '8th_triplet', weight: 10 },
+  ]),
+})
+
 const JAZZ_COMPING_VOCABULARY = Object.freeze({
-  standard_jazz: Object.freeze({
+  swing_jazz: Object.freeze({
     snare: Object.freeze([
-      { id: 'snare-rest', weight: 5, hits: [] },
-      { id: 'snare-offbeat-ghost', weight: 4, hits: [{ step: 4, ghost: true }] },
+      { id: 'snare-rest', weight: 7, hits: [] },
+      { id: 'snare-offbeat-ghost', weight: 6, hits: [{ step: 4, ghost: true }] },
       { id: 'snare-short-accent', weight: 3, hits: [{ step: 8, accent: true }] },
-      { id: 'snare-answer-phrase', weight: 2, hits: [{ step: 4, ghost: true }, { step: 8, accent: true }] },
+      { id: 'snare-answer-phrase', weight: 1, hits: [{ step: 4, ghost: true }, { step: 8, accent: true }] },
     ]),
     bass: Object.freeze([
+      { id: 'bass-feathering', weight: 7, hits: [{ step: 0 }, { step: 3 }, { step: 6 }, { step: 9 }] },
+      { id: 'bass-light-feathering', weight: 6, hits: [{ step: 0 }, { step: 6 }] },
       { id: 'bass-rest', weight: 4, hits: [] },
-      { id: 'bass-feathering', weight: 4, hits: [{ step: 0 }, { step: 3 }, { step: 6 }, { step: 9 }] },
-      { id: 'bass-sparse-hit', weight: 3, hits: [{ step: 4 }] },
+      { id: 'bass-sparse-hit', weight: 2, hits: [{ step: 4 }] },
+      { id: 'bass-bomb', weight: 0.25, hits: [{ step: 8 }], isBomb: true },
+    ]),
+    foot: Object.freeze([
+      { id: 'foot-two-four', weight: 7, hits: [{ step: 3 }, { step: 9 }] },
+      { id: 'foot-four-only', weight: 2, hits: [{ step: 9 }] },
+      { id: 'foot-rest', weight: 1, hits: [] },
+    ]),
+  }),
+  standard_jazz: Object.freeze({
+    snare: Object.freeze([
+      { id: 'snare-offbeat-ghost', weight: 6, hits: [{ step: 4, ghost: true }] },
+      { id: 'snare-answer-phrase', weight: 4, hits: [{ step: 4, ghost: true }, { step: 8, accent: true }] },
+      { id: 'snare-short-accent', weight: 4, hits: [{ step: 8, accent: true }] },
+      { id: 'snare-rest', weight: 4, hits: [] },
+    ]),
+    bass: Object.freeze([
+      { id: 'bass-light-feathering', weight: 4, hits: [{ step: 0 }, { step: 6 }] },
+      { id: 'bass-sparse-hit', weight: 4, hits: [{ step: 4 }] },
+      { id: 'bass-rest', weight: 4, hits: [] },
+      { id: 'bass-feathering', weight: 2, hits: [{ step: 0 }, { step: 3 }, { step: 6 }, { step: 9 }] },
       { id: 'bass-bomb', weight: 1, hits: [{ step: 8 }], isBomb: true },
     ]),
     foot: Object.freeze([
       { id: 'foot-two-four', weight: 6, hits: [{ step: 3 }, { step: 9 }] },
       { id: 'foot-four-only', weight: 2, hits: [{ step: 9 }] },
       { id: 'foot-rest', weight: 1, hits: [] },
+    ]),
+  }),
+  modern_jazz: Object.freeze({
+    snare: Object.freeze([
+      { id: 'snare-drag-ghost', weight: 6, hits: [{ step: 4, ghost: true }, { step: 5, ghost: true }] },
+      { id: 'snare-setup-accent', weight: 4, hits: [{ step: 2, accent: true }] },
+      { id: 'snare-sparse-chatter', weight: 4, hits: [{ step: 1, ghost: true }, { step: 8, accent: true }] },
+      { id: 'snare-rest', weight: 2, hits: [] },
+    ]),
+    bass: Object.freeze([
+      { id: 'bass-sparse-hit', weight: 4, hits: [{ step: 4 }] },
+      { id: 'bass-bomb', weight: 4, hits: [{ step: 8 }], isBomb: true },
+      { id: 'bass-two-hit-answer', weight: 4, hits: [{ step: 4 }, { step: 10 }] },
+      { id: 'bass-rest', weight: 4, hits: [] },
+    ]),
+    foot: Object.freeze([
+      { id: 'foot-two-four', weight: 5, hits: [{ step: 3 }, { step: 9 }] },
+      { id: 'foot-four-only', weight: 3, hits: [{ step: 9 }] },
+      { id: 'foot-rest', weight: 2, hits: [] },
     ]),
   }),
 })
@@ -61,13 +122,37 @@ function weightedPick(weightedItems = []) {
   return weightedItems[weightedItems.length - 1]?.value || null
 }
 
-function pickJazzCompingPhrase(pool = [], previousPhraseId = null, { blockBomb = false } = {}) {
+function pickWeightedFillResolution(fillGenre = 'rock') {
+  const weightedResolutions = FILL_RESOLUTION_WEIGHTS_BY_GENRE[fillGenre] || FILL_RESOLUTION_WEIGHTS_BY_GENRE.rock
+  return weightedPick(
+    weightedResolutions.map((entry) => ({
+      value: entry.resolution,
+      weight: entry.weight,
+    }))
+  ) || '16th'
+}
+
+function getRecentRepeatCount(history = [], phraseId) {
+  let repeatCount = 0
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index] !== phraseId) break
+    repeatCount += 1
+  }
+  return repeatCount
+}
+
+function pickJazzCompingPhrase(pool = [], history = [], { blockBomb = false } = {}) {
   const weightedPool = pool
     .map((phrase) => {
       let weight = phrase.weight || 0
-      if (previousPhraseId && phrase.id === previousPhraseId) {
-        weight *= 0.2
+      const repeatCount = getRecentRepeatCount(history, phrase.id)
+
+      if (repeatCount >= 2) {
+        weight = 0
+      } else if (repeatCount === 1) {
+        weight *= 0.35
       }
+
       if (blockBomb && phrase.isBomb) {
         weight = 0
       }
@@ -83,19 +168,19 @@ function pickJazzCompingPhrase(pool = [], previousPhraseId = null, { blockBomb =
 
 function createJazzCompingPlan(barCount, style = JAZZ_DEFAULT_STYLE) {
   const vocabulary = JAZZ_COMPING_VOCABULARY[style] || JAZZ_COMPING_VOCABULARY.standard_jazz
-  let previousSnareId = null
-  let previousBassId = null
-  let previousFootId = null
+  const snareHistory = []
+  const bassHistory = []
+  const footHistory = []
   let previousWasBomb = false
 
   return Array.from({ length: barCount }, () => {
-    const snare = pickJazzCompingPhrase(vocabulary.snare, previousSnareId)
-    const bass = pickJazzCompingPhrase(vocabulary.bass, previousBassId, { blockBomb: previousWasBomb })
-    const foot = pickJazzCompingPhrase(vocabulary.foot, previousFootId)
+    const snare = pickJazzCompingPhrase(vocabulary.snare, snareHistory)
+    const bass = pickJazzCompingPhrase(vocabulary.bass, bassHistory, { blockBomb: previousWasBomb })
+    const foot = pickJazzCompingPhrase(vocabulary.foot, footHistory)
 
-    previousSnareId = snare.id
-    previousBassId = bass.id
-    previousFootId = foot.id
+    snareHistory.push(snare.id)
+    bassHistory.push(bass.id)
+    footHistory.push(foot.id)
     previousWasBomb = Boolean(bass.isBomb)
 
     return { snare, bass, foot }
@@ -434,6 +519,129 @@ function createPracticeGroovePlans(fillGenre, grooveKey, phraseCount, grooveLock
   return Array.from({ length: resolvedPhraseCount }, () => createPracticeGroovePlan(fillGenre, grooveKey))
 }
 
+function getBaseGrooveResolution(fillGenre) {
+  if (fillGenre === 'blues' || fillGenre === 'jazz') return '8th_triplet'
+  return '16th'
+}
+
+function getBeatCountForStepLength(totalSteps, stepsPerBeat) {
+  if (!stepsPerBeat) return 0
+  return Math.max(0, Math.floor(totalSteps / stepsPerBeat))
+}
+
+function sliceLegacyPatternByBarRange(pattern, startBar, endBar) {
+  const sourceStepsPerBar = pattern?.stepsPerBar || 16
+  const startStep = startBar * sourceStepsPerBar
+  const endStep = endBar * sourceStepsPerBar
+  const totalSteps = Math.max(0, endStep - startStep)
+
+  return {
+    ...pattern,
+    accentRow: (pattern?.accentRow || []).slice(startStep, endStep),
+    kickRow: (pattern?.kickRow || []).slice(startStep, endStep),
+    accentMarks: (pattern?.accentMarks || []).slice(startStep, endStep),
+    ghostMarks: (pattern?.ghostMarks || []).slice(startStep, endStep),
+    restMarks: (pattern?.restMarks || []).slice(startStep, endStep),
+    totalSteps,
+    stepsPerBar: sourceStepsPerBar,
+  }
+}
+
+function buildCanonicalPatternsFromLegacyPracticePhrase(pattern, fillGenre, fillLengthMode, fillResolution, groovePlan = null) {
+  const baseGrooveResolution = getBaseGrooveResolution(fillGenre)
+  const groovePattern = sliceLegacyPatternByBarRange(pattern, 0, 3)
+  const fillBarPattern = sliceLegacyPatternByBarRange(pattern, 3, 4)
+
+  const remappedGroovePattern = remapLegacyPhraseToResolution(
+    groovePattern,
+    baseGrooveResolution,
+    fillGenre,
+    '1bar',
+    groovePlan
+  )
+
+  const remappedFillBarPattern = remapLegacyPhraseToResolution(
+    fillBarPattern,
+    fillResolution,
+    fillGenre,
+    fillLengthMode,
+    groovePlan,
+    fillGenre === 'jazz' ? getGrooveSectionBeatCount(fillLengthMode) : null
+  )
+
+  return [
+    legacyNotationPatternToCanonical(remappedGroovePattern, {
+      patternKind: 'fill',
+      isAccentExercise: false,
+      fillLengthType: 'full_bar',
+      resolution: remappedGroovePattern.resolution,
+    }),
+    legacyNotationPatternToCanonical(remappedFillBarPattern, {
+      patternKind: 'fill',
+      isAccentExercise: false,
+      fillLengthType: 'full_bar',
+      resolution: remappedFillBarPattern.resolution,
+    }),
+  ]
+}
+
+function buildCanonicalPatternsFromCreatedPracticePhrase(fillPattern, fillGenre, grooveKey, groovePlan = null) {
+  const selectedGroove = groovePlan?.selectedGroove || randomPick(getGenreGroovePool(fillGenre, grooveKey))
+  const baseGrooveProfile = getGridProfile(getBaseGrooveResolution(fillGenre))
+  const fillProfile = getGridProfile(fillPattern.gridProfile)
+  const grooveBarTickLength = baseGrooveProfile.stepsPerBar * baseGrooveProfile.stepTick
+  const fillBarTickLength = fillProfile.stepsPerBar * fillProfile.stepTick
+  const fillTotalTicks = fillPattern.totalTicks || fillBarTickLength
+  const fillStartTick = Math.max(0, fillBarTickLength - fillTotalTicks)
+
+  const groovePattern = createCanonicalPattern({
+    patternKind: 'fill',
+    gridProfile: baseGrooveProfile.value,
+    fillLengthType: 'full_bar',
+    totalTicks: grooveBarTickLength * 3,
+    events: createGrooveEventsForSelectedGroove(
+      baseGrooveProfile,
+      selectedGroove,
+      grooveKey,
+      fillGenre,
+      3,
+      groovePlan
+    ),
+    metadata: {
+      ...(fillPattern.metadata || {}),
+      source: 'custom_fill_library',
+      practiceWrapped: true,
+      segment: 'groove',
+    },
+  })
+
+  const fillBarPattern = createCanonicalPattern({
+    patternKind: 'fill',
+    gridProfile: fillProfile.value,
+    fillLengthType: 'full_bar',
+    totalTicks: fillBarTickLength,
+    events: [
+      ...createGrooveEventsForSelectedGroove(
+        fillProfile,
+        selectedGroove,
+        grooveKey,
+        fillGenre,
+        1,
+        groovePlan
+      ).filter((event) => event.startTick < fillStartTick),
+      ...cloneEventsWithOffset(fillPattern.events || [], fillStartTick, 'created-fill'),
+    ].sort((a, b) => a.startTick - b.startTick),
+    metadata: {
+      ...(fillPattern.metadata || {}),
+      source: 'custom_fill_library',
+      practiceWrapped: true,
+      segment: 'fill',
+    },
+  })
+
+  return [groovePattern, fillBarPattern]
+}
+
 function getCreatedCanonicalFillPool(fillLengthMode, customFillLibrary = []) {
   const targetLengthType = getTargetLengthType(fillLengthMode)
   return customFillLibrary
@@ -451,9 +659,16 @@ function createCanonicalPatternsFromCreatedFillLibrary(fillGenre, fillLengthMode
 
   return Array.from({ length: phraseCount }, (_, index) => {
     const picked = randomPick(createdPool)
-    const phrase = wrapCreatedFillAsPracticePhrase(picked, fillGenre, grooveKey, groovePlans[index])
-    return index > 0 ? addResolveHitToCanonicalPhraseStart(phrase) : phrase
-  })
+    const [groovePattern, fillPattern] = buildCanonicalPatternsFromCreatedPracticePhrase(
+      picked,
+      fillGenre,
+      grooveKey,
+      groovePlans[index]
+    )
+    return index > 0
+      ? [addResolveHitToCanonicalPhraseStart(groovePattern), fillPattern]
+      : [groovePattern, fillPattern]
+  }).flat()
 }
 
 function cloneEventsWithOffset(events, tickOffset, prefix) {
@@ -874,9 +1089,9 @@ function mergeNotationToken(existingValue, nextValue) {
 }
 
 function getGrooveSectionBeatCount(fillLengthMode) {
-  if (fillLengthMode === 'half') return 14
-  if (fillLengthMode === 'quarter') return 15
-  return 12
+  if (fillLengthMode === 'half') return 2
+  if (fillLengthMode === 'quarter') return 3
+  return 0
 }
 
 function getBeatCymbalToken(accentRow, beatStartStep, stepsPerBeat) {
@@ -893,7 +1108,7 @@ function applyFullBluesTripletCymbalPulse(accentRow, targetProfile, fillLengthMo
 
   const nextAccentRow = [...accentRow]
   const targetStepsPerBeat = targetProfile.stepsPerBar / 4
-  const grooveBeatCount = getGrooveSectionBeatCount(fillLengthMode)
+  const grooveBeatCount = getBeatCountForStepLength(nextAccentRow.length, targetStepsPerBeat)
 
   for (let beatIndex = 0; beatIndex < grooveBeatCount; beatIndex += 1) {
     const targetBeatStart = beatIndex * targetStepsPerBeat
@@ -909,7 +1124,7 @@ function applyFullBluesTripletCymbalPulse(accentRow, targetProfile, fillLengthMo
   return nextAccentRow
 }
 
-function applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks, restMarks, targetProfile, fillLengthMode, groovePlan = null) {
+function applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks, restMarks, targetProfile, fillLengthMode, groovePlan = null, grooveBeatCountOverride = null) {
   if (!Array.isArray(accentRow) || !Array.isArray(kickRow) || targetProfile.value !== 'triplet_8') {
     return { accentRow, kickRow, accentMarks, ghostMarks, restMarks }
   }
@@ -920,7 +1135,7 @@ function applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks,
   const nextGhostMarks = Array.isArray(ghostMarks) ? [...ghostMarks] : Array(accentRow.length).fill(false)
   const nextRestMarks = Array.isArray(restMarks) ? [...restMarks] : Array(accentRow.length).fill(false)
   const stepsPerBeat = targetProfile.stepsPerBar / 4
-  const grooveBeatCount = getGrooveSectionBeatCount(fillLengthMode)
+  const grooveBeatCount = grooveBeatCountOverride ?? getBeatCountForStepLength(nextAccentRow.length, stepsPerBeat)
   const jazzRideStepSetForBar = getJazzRideStepSetForBar(stepsPerBeat)
   const grooveBarCount = Math.ceil(grooveBeatCount / 4)
   const jazzCompingPlan = groovePlan?.jazzCompingPlan || createJazzCompingPlan(grooveBarCount)
@@ -978,7 +1193,7 @@ function applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks,
   }
 }
 
-function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode, groovePlan = null) {
+function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode, groovePlan = null, grooveBeatCountOverride = null) {
   if (!pattern?.stepsPerBar || !targetResolution) return pattern
 
   const targetProfile = getGridProfile(targetResolution)
@@ -1027,7 +1242,17 @@ function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fil
   }
 
   if (fillGenre === 'jazz' && targetProfile.value === 'triplet_8') {
-    const jazzGroove = applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks, restMarks, targetProfile, fillLengthMode, groovePlan)
+    const jazzGroove = applyJazzTripletRideGroove(
+      accentRow,
+      kickRow,
+      accentMarks,
+      ghostMarks,
+      restMarks,
+      targetProfile,
+      fillLengthMode,
+      groovePlan,
+      grooveBeatCountOverride
+    )
     jazzGroove.accentRow.forEach((value, index) => {
       accentRow[index] = value
     })
@@ -1164,8 +1389,6 @@ export function createCanonicalFillInPracticePatterns(
     if (createdPatterns.length) return createdPatterns
   }
 
-  const targetResolution = fillGenre === 'blues' || fillGenre === 'jazz' ? '8th_triplet' : '16th'
-
   return createFillInPracticePatterns(
     fillGenre,
     grooveKey,
@@ -1176,11 +1399,14 @@ export function createCanonicalFillInPracticePatterns(
     allowOpenHiHat,
     notationEngine,
     customFillLibrary
-  ).map((pattern, index) => remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode, groovePlans[index]))
-    .map((pattern) => legacyNotationPatternToCanonical(pattern, {
-    patternKind: 'fill',
-    isAccentExercise: false,
-    fillLengthType: 'full_bar',
-    resolution: targetResolution,
-  }))
+  ).flatMap((pattern, index) => {
+    const fillResolution = pickWeightedFillResolution(fillGenre)
+    return buildCanonicalPatternsFromLegacyPracticePhrase(
+      pattern,
+      fillGenre,
+      fillLengthMode,
+      fillResolution,
+      groovePlans[index]
+    )
+  })
 }

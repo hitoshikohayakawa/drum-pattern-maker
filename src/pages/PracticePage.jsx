@@ -8,6 +8,7 @@ import {
   FILL_BAR_COUNT_OPTIONS,
   FILL_GENRE_OPTIONS,
   FILL_GROOVE_OPTIONS,
+  FILL_GROOVE_LOCK_OPTIONS,
   FILL_LENGTH_OPTIONS,
   FILL_PATTERN_OPTIONS,
   FLOOR_TOM_TONE_OPTIONS,
@@ -42,6 +43,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   const [orchestration, setOrchestration] = useState('none')
   const [kickSetting, setKickSetting] = useState('2')
   const [fillGroove, setFillGroove] = useState('random')
+  const [fillGrooveLock, setFillGrooveLock] = useState('4bars')
   const [fillGenre, setFillGenre] = useState('rock')
   const [fillLengthMode, setFillLengthMode] = useState('1bar')
   const [fillPatternMode, setFillPatternMode] = useState('basic')
@@ -107,6 +109,11 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
     '1bar': localize('1小節フィル', '1-Bar Fill'),
     half: localize('0.5小節フィル', 'Half-Bar Fill'),
     quarter: localize('0.25小節フィル', 'Quarter-Bar Fill'),
+  }[value] || value)
+
+  const fillGrooveLockLabel = (value) => ({
+    '4bars': localize('4小節固定', 'Lock Every 4 Bars'),
+    all: localize('全て固定', 'Lock All Bars'),
   }[value] || value)
 
   const fillPatternLabel = (value) => ({
@@ -192,8 +199,8 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   ), [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
 
   const canonicalFillPatterns = useMemo(() => (
-    createCanonicalFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, 'vexflow', practiceEnabledCustomFills)
-  ), [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey, practiceEnabledCustomFills])
+    createCanonicalFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillGrooveLock, fillOpenHiHat, 'vexflow', practiceEnabledCustomFills)
+  ), [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillGrooveLock, fillOpenHiHat, refreshKey, practiceEnabledCustomFills])
 
   const notationPatterns = useMemo(() => (
     buildNotationPatternsFromCanonicalPatterns(canonicalPatterns)
@@ -260,6 +267,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
     kickSetting,
     fillGenre,
     fillGroove,
+    fillGrooveLock,
     fillLengthMode,
     fillPatternMode,
     fillBarCount,
@@ -419,6 +427,15 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
                   </div>
 
                   <div className="control-item">
+                    <label>{localize('基本ビート固定', 'Base Groove Lock')}</label>
+                    <select value={fillGrooveLock} onChange={(event) => setFillGrooveLock(event.target.value)}>
+                      {FILL_GROOVE_LOCK_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{fillGrooveLockLabel(option.value)}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="control-item">
                     <label>{localize('フィル長', 'Fill Length')}</label>
                     <select value={fillLengthMode} onChange={(event) => setFillLengthMode(event.target.value)}>
                       {FILL_LENGTH_OPTIONS.map((option) => (
@@ -530,6 +547,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
                   <div>{localize('モード', 'Mode')}: {localize('フィルイン練習', 'Fill Practice')}</div>
                   <div>{localize('ジャンル', 'Genre')}: {fillGenreLabel(fillGenre)}</div>
                   <div>{localize('基本ビート', 'Base Groove')}: {grooveLabel(fillGroove)}</div>
+                  <div>{localize('基本ビート固定', 'Base Groove Lock')}: {fillGrooveLockLabel(fillGrooveLock)}</div>
                   <div>{localize('フィル長', 'Fill Length')}: {fillLengthLabel(fillLengthMode)}</div>
                   <div>{localize('フィルパターン', 'Fill Pattern')}: {fillPatternLabel(fillPatternMode)}</div>
                   <div>{localize('生成小節数', 'Generated Bars')}: {fillBarCountLabel(fillBarCount)}</div>

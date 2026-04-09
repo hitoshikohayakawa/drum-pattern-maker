@@ -19,9 +19,120 @@ import {
 const RESOLVE_CYMBAL_INSTRUMENTS = new Set(['hihat_close', 'hihat_open', 'ride', 'crash'])
 const LOWER_VOICE_BASS = '●'
 const LOWER_VOICE_FOOT_HIHAT = 'P'
+const JAZZ_DEFAULT_STYLE = 'standard_jazz'
+const DEFAULT_GROOVE_LOCK_MODE = '4bars'
+
+const JAZZ_COMPING_VOCABULARY = Object.freeze({
+  standard_jazz: Object.freeze({
+    snare: Object.freeze([
+      { id: 'snare-rest', weight: 5, hits: [] },
+      { id: 'snare-offbeat-ghost', weight: 4, hits: [{ step: 4, ghost: true }] },
+      { id: 'snare-short-accent', weight: 3, hits: [{ step: 8, accent: true }] },
+      { id: 'snare-answer-phrase', weight: 2, hits: [{ step: 4, ghost: true }, { step: 8, accent: true }] },
+    ]),
+    bass: Object.freeze([
+      { id: 'bass-rest', weight: 4, hits: [] },
+      { id: 'bass-feathering', weight: 4, hits: [{ step: 0 }, { step: 3 }, { step: 6 }, { step: 9 }] },
+      { id: 'bass-sparse-hit', weight: 3, hits: [{ step: 4 }] },
+      { id: 'bass-bomb', weight: 1, hits: [{ step: 8 }], isBomb: true },
+    ]),
+    foot: Object.freeze([
+      { id: 'foot-two-four', weight: 6, hits: [{ step: 3 }, { step: 9 }] },
+      { id: 'foot-four-only', weight: 2, hits: [{ step: 9 }] },
+      { id: 'foot-rest', weight: 1, hits: [] },
+    ]),
+  }),
+})
 
 function randomPick(list) {
   return list[Math.floor(Math.random() * list.length)]
+}
+
+function weightedPick(weightedItems = []) {
+  const totalWeight = weightedItems.reduce((sum, item) => sum + Math.max(0, item.weight || 0), 0)
+  if (totalWeight <= 0) return weightedItems[0]?.value || null
+
+  let cursor = Math.random() * totalWeight
+  for (const item of weightedItems) {
+    cursor -= Math.max(0, item.weight || 0)
+    if (cursor <= 0) return item.value
+  }
+
+  return weightedItems[weightedItems.length - 1]?.value || null
+}
+
+function pickJazzCompingPhrase(pool = [], previousPhraseId = null, { blockBomb = false } = {}) {
+  const weightedPool = pool
+    .map((phrase) => {
+      let weight = phrase.weight || 0
+      if (previousPhraseId && phrase.id === previousPhraseId) {
+        weight *= 0.2
+      }
+      if (blockBomb && phrase.isBomb) {
+        weight = 0
+      }
+      return {
+        value: phrase,
+        weight,
+      }
+    })
+    .filter((entry) => entry.weight > 0)
+
+  return weightedPick(weightedPool) || pool[0] || { id: 'empty', hits: [] }
+}
+
+function createJazzCompingPlan(barCount, style = JAZZ_DEFAULT_STYLE) {
+  const vocabulary = JAZZ_COMPING_VOCABULARY[style] || JAZZ_COMPING_VOCABULARY.standard_jazz
+  let previousSnareId = null
+  let previousBassId = null
+  let previousFootId = null
+  let previousWasBomb = false
+
+  return Array.from({ length: barCount }, () => {
+    const snare = pickJazzCompingPhrase(vocabulary.snare, previousSnareId)
+    const bass = pickJazzCompingPhrase(vocabulary.bass, previousBassId, { blockBomb: previousWasBomb })
+    const foot = pickJazzCompingPhrase(vocabulary.foot, previousFootId)
+
+    previousSnareId = snare.id
+    previousBassId = bass.id
+    previousFootId = foot.id
+    previousWasBomb = Boolean(bass.isBomb)
+
+    return { snare, bass, foot }
+  })
+}
+
+function addJazzCompingNotesToEventMap(eventMap, barTickOffset, profile, barPlan) {
+  const upsertEvent = (startTick, note) => {
+    const existing = eventMap.get(startTick)
+    if (existing) {
+      existing.notes.push(note)
+      return
+    }
+
+    eventMap.set(startTick, {
+      id: `groove-${startTick}`,
+      startTick,
+      durationTick: profile.stepTick,
+      notes: [note],
+      isRest: false,
+    })
+  }
+
+  ;(barPlan?.snare?.hits || []).forEach((hit) => {
+    upsertEvent(barTickOffset + hit.step * profile.stepTick, {
+      instrument: 'snare',
+      modifiers: hit.ghost ? { ghost: true } : hit.accent ? { accent: true } : undefined,
+    })
+  })
+
+  ;(barPlan?.bass?.hits || []).forEach((hit) => {
+    upsertEvent(barTickOffset + hit.step * profile.stepTick, { instrument: 'bass_drum' })
+  })
+
+  ;(barPlan?.foot?.hits || []).forEach((hit) => {
+    upsertEvent(barTickOffset + hit.step * profile.stepTick, { instrument: 'foot_hihat' })
+  })
 }
 
 function replaceHiHatWithOpen(symbol) {
@@ -306,6 +417,23 @@ function getTargetLengthType(fillLengthMode) {
       : 'quarter_bar'
 }
 
+function createPracticeGroovePlan(fillGenre, grooveKey) {
+  return {
+    selectedGroove: randomPick(getGenreGroovePool(fillGenre, grooveKey)),
+    jazzCompingPlan: fillGenre === 'jazz' ? createJazzCompingPlan(1) : null,
+  }
+}
+
+function createPracticeGroovePlans(fillGenre, grooveKey, phraseCount, grooveLockMode = DEFAULT_GROOVE_LOCK_MODE) {
+  const resolvedPhraseCount = Math.max(1, phraseCount)
+  if (grooveLockMode === 'all') {
+    const sharedPlan = createPracticeGroovePlan(fillGenre, grooveKey)
+    return Array.from({ length: resolvedPhraseCount }, () => sharedPlan)
+  }
+
+  return Array.from({ length: resolvedPhraseCount }, () => createPracticeGroovePlan(fillGenre, grooveKey))
+}
+
 function getCreatedCanonicalFillPool(fillLengthMode, customFillLibrary = []) {
   const targetLengthType = getTargetLengthType(fillLengthMode)
   return customFillLibrary
@@ -314,15 +442,16 @@ function getCreatedCanonicalFillPool(fillLengthMode, customFillLibrary = []) {
     .filter((pattern) => pattern?.events?.length)
 }
 
-function createCanonicalPatternsFromCreatedFillLibrary(fillGenre, fillLengthMode, barCount, grooveKey, customFillLibrary = []) {
+function createCanonicalPatternsFromCreatedFillLibrary(fillGenre, fillLengthMode, barCount, grooveKey, grooveLockMode = DEFAULT_GROOVE_LOCK_MODE, customFillLibrary = []) {
   const phraseCount = Math.max(1, Number(barCount) / 4)
   const createdPool = getCreatedCanonicalFillPool(fillLengthMode, customFillLibrary)
+  const groovePlans = createPracticeGroovePlans(fillGenre, grooveKey, phraseCount, grooveLockMode)
 
   if (!createdPool.length) return []
 
   return Array.from({ length: phraseCount }, (_, index) => {
     const picked = randomPick(createdPool)
-    const phrase = wrapCreatedFillAsPracticePhrase(picked, fillGenre, grooveKey)
+    const phrase = wrapCreatedFillAsPracticePhrase(picked, fillGenre, grooveKey, groovePlans[index])
     return index > 0 ? addResolveHitToCanonicalPhraseStart(phrase) : phrase
   })
 }
@@ -371,13 +500,13 @@ function getBluesTripletPulseOffsets(profile) {
   return [0, 1, 2]
 }
 
-function createGrooveEventsForSelectedGroove(profile, groove, grooveKey, fillGenre, barCount = 4) {
+function createGrooveEventsForSelectedGroove(profile, groove, grooveKey, fillGenre, barCount = 4, groovePlan = null) {
   if (fillGenre === 'jazz' && profile.value === 'triplet_8') {
-    return createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, barCount)
+    return createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, barCount, groovePlan)
   }
 
   if (!groove?.hand?.length) {
-    return createSimpleGrooveEventsForBars(profile, grooveKey, fillGenre, barCount)
+    return createSimpleGrooveEventsForBars(profile, grooveKey, fillGenre, barCount, groovePlan)
   }
 
   const eventMap = new Map()
@@ -477,13 +606,16 @@ function getJazzRideStepSetForBar(stepsPerBeat) {
   return stepSet
 }
 
-function createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, barCount = 4) {
+function createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, barCount = 4, groovePlan = null) {
   const eventMap = new Map()
   const stepsPerBeat = profile.stepsPerBar / 4
   const barTickLength = profile.stepsPerBar * profile.stepTick
   const cymbalInstrument = fillGenre === 'jazz' || grooveKey === 'ride' ? 'ride' : 'hihat_close'
   const lateOffset = getTripletLateOffset(stepsPerBeat)
   const jazzRideStepSetForBar = fillGenre === 'jazz' ? getJazzRideStepSetForBar(stepsPerBeat) : null
+  const jazzCompingPlan = fillGenre === 'jazz'
+    ? groovePlan?.jazzCompingPlan || createJazzCompingPlan(barCount)
+    : []
 
   const upsertEvent = (startTick, note) => {
     const existing = eventMap.get(startTick)
@@ -515,13 +647,14 @@ function createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, ba
           if (!jazzRideStepSetForBar.has(stepInBar)) continue
           upsertEvent(beatStart + stepOffset * profile.stepTick, { instrument: 'ride' })
         }
-        upsertEvent(beatStart, { instrument: 'bass_drum' })
-        if (beatIndex === 1 || beatIndex === 3) {
-          upsertEvent(beatStart, { instrument: 'foot_hihat' })
-        }
       } else {
         upsertEvent(beatStart, { instrument: cymbalInstrument })
       }
+    }
+
+    if (fillGenre === 'jazz') {
+      const barPlan = jazzCompingPlan[barIndex % Math.max(1, jazzCompingPlan.length)]
+      addJazzCompingNotesToEventMap(eventMap, barTickOffset, profile, barPlan)
     }
 
     if (fillGenre !== 'jazz') {
@@ -547,9 +680,9 @@ function createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, ba
   })).sort((a, b) => a.startTick - b.startTick)
 }
 
-function createSimpleGrooveEventsForBars(profile, grooveKey, fillGenre = 'rock', barCount = 4) {
+function createSimpleGrooveEventsForBars(profile, grooveKey, fillGenre = 'rock', barCount = 4, groovePlan = null) {
   if (profile.value === 'triplet_8' || profile.value === 'triplet_16') {
-    return createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, barCount)
+    return createTripletGenreGrooveEventsForBars(profile, fillGenre, grooveKey, barCount, groovePlan)
   }
 
   const eventMap = new Map()
@@ -619,22 +752,22 @@ function createSimpleGrooveEventsForBars(profile, grooveKey, fillGenre = 'rock',
   return [...eventMap.values()].sort((a, b) => a.startTick - b.startTick)
 }
 
-function wrapCreatedFillAsPracticePhrase(fillPattern, fillGenre = 'rock', grooveKey = 'straight') {
+function wrapCreatedFillAsPracticePhrase(fillPattern, fillGenre = 'rock', grooveKey = 'straight', groovePlan = null) {
   const profile = getGridProfile(fillPattern.gridProfile)
   const practiceBarCount = 4
   const barTickLength = profile.stepsPerBar * profile.stepTick
   const totalTicks = barTickLength * practiceBarCount
   const fillTotalTicks = fillPattern.totalTicks || barTickLength
   const fillStartTick = Math.max(0, totalTicks - fillTotalTicks)
-  const groovePool = getGenreGroovePool(fillGenre, grooveKey)
-  const selectedGroove = randomPick(groovePool)
+  const selectedGroove = groovePlan?.selectedGroove || randomPick(getGenreGroovePool(fillGenre, grooveKey))
 
   const grooveEvents = createGrooveEventsForSelectedGroove(
     profile,
     selectedGroove,
     grooveKey,
     fillGenre,
-    practiceBarCount
+    practiceBarCount,
+    groovePlan
   )
     .filter((event) => event.startTick < fillStartTick)
 
@@ -658,13 +791,14 @@ function wrapCreatedFillAsPracticePhrase(fillPattern, fillGenre = 'rock', groove
   })
 }
 
-function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat, customFillLibrary = []) {
-  const groovePool = getGenreGroovePool(fillGenre, grooveKey)
-  const selectedGroove = randomPick(groovePool)
+function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat, customFillLibrary = [], groovePlan = null) {
+  const selectedGroove = groovePlan?.selectedGroove || randomPick(getGenreGroovePool(fillGenre, grooveKey))
   const fillPool = getFillLibrary(fillGenre, fillLengthMode, fillPatternMode, customFillLibrary)
 
   let accentRow = Array(64).fill('')
   const kickRow = Array(64).fill('')
+  const accentMarks = Array(64).fill(false)
+  const ghostMarks = Array(64).fill(false)
   const restMarks = Array(64).fill(false)
 
   for (let bar = 0; bar < 4; bar += 1) {
@@ -683,6 +817,8 @@ function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatter
     return {
       accentRow,
       kickRow,
+      accentMarks,
+      ghostMarks,
       restMarks,
       stepsPerBar: 16,
       totalSteps: 64,
@@ -696,6 +832,8 @@ function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatter
     return {
       accentRow,
       kickRow,
+      accentMarks,
+      ghostMarks,
       restMarks,
       stepsPerBar: 16,
       totalSteps: 64,
@@ -709,6 +847,8 @@ function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatter
     return {
       accentRow,
       kickRow,
+      accentMarks,
+      ghostMarks,
       restMarks,
       stepsPerBar: 16,
       totalSteps: 64,
@@ -719,6 +859,8 @@ function createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatter
   return {
     accentRow,
     kickRow,
+    accentMarks,
+    ghostMarks,
     restMarks,
     stepsPerBar: 16,
     totalSteps: 64,
@@ -767,49 +909,76 @@ function applyFullBluesTripletCymbalPulse(accentRow, targetProfile, fillLengthMo
   return nextAccentRow
 }
 
-function applyJazzTripletRideGroove(accentRow, kickRow, restMarks, targetProfile, fillLengthMode) {
+function applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks, restMarks, targetProfile, fillLengthMode, groovePlan = null) {
   if (!Array.isArray(accentRow) || !Array.isArray(kickRow) || targetProfile.value !== 'triplet_8') {
-    return { accentRow, kickRow, restMarks }
+    return { accentRow, kickRow, accentMarks, ghostMarks, restMarks }
   }
 
   const nextAccentRow = [...accentRow]
   const nextKickRow = [...kickRow]
+  const nextAccentMarks = Array.isArray(accentMarks) ? [...accentMarks] : Array(accentRow.length).fill(false)
+  const nextGhostMarks = Array.isArray(ghostMarks) ? [...ghostMarks] : Array(accentRow.length).fill(false)
   const nextRestMarks = Array.isArray(restMarks) ? [...restMarks] : Array(accentRow.length).fill(false)
   const stepsPerBeat = targetProfile.stepsPerBar / 4
   const grooveBeatCount = getGrooveSectionBeatCount(fillLengthMode)
   const jazzRideStepSetForBar = getJazzRideStepSetForBar(stepsPerBeat)
+  const grooveBarCount = Math.ceil(grooveBeatCount / 4)
+  const jazzCompingPlan = groovePlan?.jazzCompingPlan || createJazzCompingPlan(grooveBarCount)
+
+  for (let stepIndex = 0; stepIndex < grooveBeatCount * stepsPerBeat; stepIndex += 1) {
+    nextAccentRow[stepIndex] = ''
+    nextKickRow[stepIndex] = ''
+    nextAccentMarks[stepIndex] = false
+    nextGhostMarks[stepIndex] = false
+    nextRestMarks[stepIndex] = false
+  }
 
   for (let beatIndex = 0; beatIndex < grooveBeatCount; beatIndex += 1) {
     const beatStart = beatIndex * stepsPerBeat
     const beatInBar = beatIndex % 4
 
     for (let stepOffset = 0; stepOffset < stepsPerBeat; stepOffset += 1) {
-      nextAccentRow[beatStart + stepOffset] = ''
-      nextKickRow[beatStart + stepOffset] = ''
-      nextRestMarks[beatStart + stepOffset] = false
-    }
-
-    for (let stepOffset = 0; stepOffset < stepsPerBeat; stepOffset += 1) {
       const stepInBar = beatInBar * stepsPerBeat + stepOffset
       if (!jazzRideStepSetForBar.has(stepInBar)) continue
       nextAccentRow[beatStart + stepOffset] = mergeNotationToken(nextAccentRow[beatStart + stepOffset], 'R')
     }
+  }
 
-    nextKickRow[beatStart] = appendLowerVoiceToken(nextKickRow[beatStart], LOWER_VOICE_BASS)
+  for (let barIndex = 0; barIndex < grooveBarCount; barIndex += 1) {
+    const barPlan = jazzCompingPlan[barIndex % Math.max(1, jazzCompingPlan.length)]
+    const barStart = barIndex * targetProfile.stepsPerBar
 
-    if (beatIndex % 4 === 1 || beatIndex % 4 === 3) {
-      nextKickRow[beatStart] = appendLowerVoiceToken(nextKickRow[beatStart], LOWER_VOICE_FOOT_HIHAT)
-    }
+    ;(barPlan.snare?.hits || []).forEach((hit) => {
+      const targetIndex = barStart + hit.step
+      if (targetIndex >= grooveBeatCount * stepsPerBeat) return
+      nextAccentRow[targetIndex] = mergeNotationToken(nextAccentRow[targetIndex], 'S')
+      nextAccentMarks[targetIndex] = nextAccentMarks[targetIndex] || Boolean(hit.accent)
+      nextGhostMarks[targetIndex] = nextGhostMarks[targetIndex] || Boolean(hit.ghost)
+    })
+
+    ;(barPlan.bass?.hits || []).forEach((hit) => {
+      const targetIndex = barStart + hit.step
+      if (targetIndex >= grooveBeatCount * stepsPerBeat) return
+      nextKickRow[targetIndex] = appendLowerVoiceToken(nextKickRow[targetIndex], LOWER_VOICE_BASS)
+    })
+
+    ;(barPlan.foot?.hits || []).forEach((hit) => {
+      const targetIndex = barStart + hit.step
+      if (targetIndex >= grooveBeatCount * stepsPerBeat) return
+      nextKickRow[targetIndex] = appendLowerVoiceToken(nextKickRow[targetIndex], LOWER_VOICE_FOOT_HIHAT)
+    })
   }
 
   return {
     accentRow: nextAccentRow,
     kickRow: nextKickRow,
+    accentMarks: nextAccentMarks,
+    ghostMarks: nextGhostMarks,
     restMarks: nextRestMarks,
   }
 }
 
-function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode) {
+function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode, groovePlan = null) {
   if (!pattern?.stepsPerBar || !targetResolution) return pattern
 
   const targetProfile = getGridProfile(targetResolution)
@@ -825,6 +994,8 @@ function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fil
   const totalSteps = barCount * targetProfile.stepsPerBar
   const accentRow = Array(totalSteps).fill('')
   const kickRow = Array(totalSteps).fill('')
+  const accentMarks = Array(totalSteps).fill(false)
+  const ghostMarks = Array(totalSteps).fill(false)
   const restMarks = Array(totalSteps).fill(false)
 
   for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
@@ -835,6 +1006,8 @@ function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fil
 
       accentRow[targetIndex] = mergeNotationToken(accentRow[targetIndex], pattern.accentRow?.[sourceIndex] || '')
       kickRow[targetIndex] = mergeNotationToken(kickRow[targetIndex], pattern.kickRow?.[sourceIndex] || '')
+      accentMarks[targetIndex] = accentMarks[targetIndex] || Boolean(pattern.accentMarks?.[sourceIndex])
+      ghostMarks[targetIndex] = ghostMarks[targetIndex] || Boolean(pattern.ghostMarks?.[sourceIndex])
       restMarks[targetIndex] = restMarks[targetIndex] || Boolean(pattern.restMarks?.[sourceIndex])
     }
   }
@@ -854,12 +1027,18 @@ function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fil
   }
 
   if (fillGenre === 'jazz' && targetProfile.value === 'triplet_8') {
-    const jazzGroove = applyJazzTripletRideGroove(accentRow, kickRow, restMarks, targetProfile, fillLengthMode)
+    const jazzGroove = applyJazzTripletRideGroove(accentRow, kickRow, accentMarks, ghostMarks, restMarks, targetProfile, fillLengthMode, groovePlan)
     jazzGroove.accentRow.forEach((value, index) => {
       accentRow[index] = value
     })
     jazzGroove.kickRow.forEach((value, index) => {
       kickRow[index] = value
+    })
+    jazzGroove.accentMarks.forEach((value, index) => {
+      accentMarks[index] = value
+    })
+    jazzGroove.ghostMarks.forEach((value, index) => {
+      ghostMarks[index] = value
     })
     jazzGroove.restMarks.forEach((value, index) => {
       restMarks[index] = value
@@ -870,6 +1049,8 @@ function remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fil
     ...pattern,
     accentRow,
     kickRow,
+    accentMarks,
+    ghostMarks,
     restMarks,
     stepsPerBar: targetProfile.stepsPerBar,
     totalSteps,
@@ -927,8 +1108,9 @@ function createCurriculumPhrase(patternNo, fillGenre, grooveKey, allowOpenHiHat)
   }
 }
 
-export function createFillInPracticePatterns(fillGenre, grooveKey, fillLengthMode, fillPatternMode, barCount, allowOpenHiHat, notationEngine, customFillLibrary = []) {
+export function createFillInPracticePatterns(fillGenre, grooveKey, fillLengthMode, fillPatternMode, barCount, grooveLockMode = DEFAULT_GROOVE_LOCK_MODE, allowOpenHiHat, notationEngine, customFillLibrary = []) {
   const phraseCount = Math.max(1, Number(barCount) / 4)
+  const groovePlans = createPracticeGroovePlans(fillGenre, grooveKey, phraseCount, grooveLockMode)
   const phrases = []
 
   for (let index = 0; index < phraseCount; index += 1) {
@@ -943,7 +1125,7 @@ export function createFillInPracticePatterns(fillGenre, grooveKey, fillLengthMod
     } 
     // それ以外のVexFlow/SVGモードの場合は、ユーザーの「0.5小節」等のフィル長指定とジェネレーターを正しく適用する
     else {
-      phrase = createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat, customFillLibrary)
+      phrase = createSingleFillPhrase(fillGenre, grooveKey, fillLengthMode, fillPatternMode, allowOpenHiHat, customFillLibrary, groovePlans[index])
     }
 
     if (index > 0) {
@@ -962,16 +1144,21 @@ export function createCanonicalFillInPracticePatterns(
   fillLengthMode,
   fillPatternMode,
   barCount,
+  grooveLockMode = DEFAULT_GROOVE_LOCK_MODE,
   allowOpenHiHat,
   notationEngine,
   customFillLibrary = []
 ) {
+  const phraseCount = Math.max(1, Number(barCount) / 4)
+  const groovePlans = createPracticeGroovePlans(fillGenre, grooveKey, phraseCount, grooveLockMode)
+
   if (fillPatternMode === 'created') {
     const createdPatterns = createCanonicalPatternsFromCreatedFillLibrary(
       fillGenre,
       fillLengthMode,
       barCount,
       grooveKey,
+      grooveLockMode,
       customFillLibrary
     )
     if (createdPatterns.length) return createdPatterns
@@ -985,10 +1172,11 @@ export function createCanonicalFillInPracticePatterns(
     fillLengthMode,
     fillPatternMode,
     barCount,
+    grooveLockMode,
     allowOpenHiHat,
     notationEngine,
     customFillLibrary
-  ).map((pattern) => remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode))
+  ).map((pattern, index) => remapLegacyPhraseToResolution(pattern, targetResolution, fillGenre, fillLengthMode, groovePlans[index]))
     .map((pattern) => legacyNotationPatternToCanonical(pattern, {
     patternKind: 'fill',
     isAccentExercise: false,

@@ -1,6 +1,7 @@
 const TONEJS_BASE_URL = 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/'
 const TONEJS_AUDIO_BASE_URL = 'https://tonejs.github.io/audio/'
 const PEARL_MASTER_BASE_URL = 'https://oramics.github.io/sampled/DRUMS/pearl-master-studio/samples/'
+const FOOT_HIHAT_EXTERNAL_URL = `${TONEJS_BASE_URL}hihat.mp3`
 
 export const SNARE_TONE_PRESETS = {
   maple: { hpf: 130, lpf: 4200, threshold: -24, ratio: 2.8, attack: 0.004, release: 0.14, volume: -6, rate: 0.94 },
@@ -64,6 +65,40 @@ function getTomFile(kitLibrary, preset) {
   return kitLibrary === 'pearlMaster' ? preset.pearlFile : preset.webFile
 }
 
+export function getInstrumentSampleMap(kitLibrary, tomTone, floorTomTone, cymbalTone) {
+  const cymbalSource = getCymbalSource(kitLibrary, cymbalTone)
+  const tomPreset = TOM_TONE_PRESETS[tomTone]
+  const floorTomPreset = FLOOR_TOM_TONE_PRESETS[floorTomTone]
+
+  if (kitLibrary === 'pearlMaster') {
+    return {
+      kick: { playerName: 'kick', url: `${PEARL_MASTER_BASE_URL}kick-01.wav` },
+      tom: { playerName: 'tom', url: `${PEARL_MASTER_BASE_URL}${getTomFile(kitLibrary, tomPreset)}` },
+      midTom: { playerName: 'midTom', url: `${PEARL_MASTER_BASE_URL}tom-02.wav` },
+      lowTom: { playerName: 'lowTom', url: `${PEARL_MASTER_BASE_URL}tom-03.wav` },
+      floorTom: { playerName: 'floorTom', url: `${PEARL_MASTER_BASE_URL}${getTomFile(kitLibrary, floorTomPreset)}` },
+      hihat_close: { playerName: 'hihat', url: `${PEARL_MASTER_BASE_URL}hihat-closed.wav`, rate: 1, volume: -8.5 },
+      hihat_open: { playerName: 'hihatOpen', url: `${PEARL_MASTER_BASE_URL}hihat-open.wav`, rate: 1, volume: -6.5 },
+      ride: { playerName: 'ride', url: `${PEARL_MASTER_BASE_URL}ride-01.wav`, rate: 0.98, volume: -9 },
+      crash: { playerName: 'crash', url: cymbalSource?.url, rate: cymbalSource?.rate, volume: cymbalSource?.volume, fadeOut: cymbalSource?.fadeOut },
+      foot_hihat: { playerName: 'footHiHat', url: FOOT_HIHAT_EXTERNAL_URL, rate: 0.9, volume: -10, fadeOut: 0.04 },
+    }
+  }
+
+  return {
+    kick: { playerName: 'kick', url: `${TONEJS_BASE_URL}kick.mp3` },
+    tom: { playerName: 'tom', url: `${TONEJS_BASE_URL}${getTomFile(kitLibrary, tomPreset)}` },
+    midTom: { playerName: 'midTom', url: `${TONEJS_BASE_URL}tom2.mp3` },
+    lowTom: { playerName: 'lowTom', url: `${TONEJS_BASE_URL}tom3.mp3` },
+    floorTom: { playerName: 'floorTom', url: `${TONEJS_BASE_URL}${getTomFile(kitLibrary, floorTomPreset)}` },
+    hihat_close: { playerName: 'hihat', url: `${TONEJS_BASE_URL}hihat.mp3`, rate: 1.08, volume: -7 },
+    hihat_open: { playerName: 'hihatOpen', url: `${TONEJS_BASE_URL}hihat.mp3`, rate: 0.9, volume: -4.5 },
+    ride: { playerName: 'ride', url: `${TONEJS_BASE_URL}hihat.mp3`, rate: 1, volume: -8 },
+    crash: { playerName: 'crash', url: cymbalSource?.url, rate: cymbalSource?.rate, volume: cymbalSource?.volume, fadeOut: cymbalSource?.fadeOut },
+    foot_hihat: { playerName: 'footHiHat', url: FOOT_HIHAT_EXTERNAL_URL, rate: 0.9, volume: -10, fadeOut: 0.04 },
+  }
+}
+
 export function getCymbalSource(kitLibrary, cymbalTone) {
   const preset = CYMBAL_TONE_PRESETS[cymbalTone]
   if (!preset) return null
@@ -86,6 +121,7 @@ export function getCymbalSource(kitLibrary, cymbalTone) {
 }
 
 export function getKitConfig(kitLibrary, tomTone, floorTomTone) {
+  const instrumentMap = getInstrumentSampleMap(kitLibrary, tomTone, floorTomTone, 'tight')
   const tomPreset = TOM_TONE_PRESETS[tomTone]
   const floorTomPreset = FLOOR_TOM_TONE_PRESETS[floorTomTone]
   if (kitLibrary === 'pearlMaster') {
@@ -93,18 +129,18 @@ export function getKitConfig(kitLibrary, tomTone, floorTomTone) {
       baseUrl: PEARL_MASTER_BASE_URL,
       volume: -2.5,
       files: {
-        kick: 'kick-01.wav',
-        tom: getTomFile(kitLibrary, tomPreset),
-        midTom: 'tom-02.wav',
-        lowTom: 'tom-03.wav',
-        floorTom: getTomFile(kitLibrary, floorTomPreset),
-        hihat: 'hihat-closed.wav',
-        hihatOpen: 'hihat-open.wav',
-        ride: 'ride-01.wav',
+        kick: instrumentMap.kick.url.replace(PEARL_MASTER_BASE_URL, ''),
+        tom: instrumentMap.tom.url.replace(PEARL_MASTER_BASE_URL, ''),
+        midTom: instrumentMap.midTom.url.replace(PEARL_MASTER_BASE_URL, ''),
+        lowTom: instrumentMap.lowTom.url.replace(PEARL_MASTER_BASE_URL, ''),
+        floorTom: instrumentMap.floorTom.url.replace(PEARL_MASTER_BASE_URL, ''),
+        hihat: instrumentMap.hihat_close.url.replace(PEARL_MASTER_BASE_URL, ''),
+        hihatOpen: instrumentMap.hihat_open.url.replace(PEARL_MASTER_BASE_URL, ''),
+        ride: instrumentMap.ride.url.replace(PEARL_MASTER_BASE_URL, ''),
       },
-      hihat: { rate: 1, volume: -8.5 },
-      hihatOpen: { rate: 1, volume: -6.5 },
-      ride: { rate: 0.98, volume: -9 },
+      hihat: { rate: instrumentMap.hihat_close.rate, volume: instrumentMap.hihat_close.volume },
+      hihatOpen: { rate: instrumentMap.hihat_open.rate, volume: instrumentMap.hihat_open.volume },
+      ride: { rate: instrumentMap.ride.rate, volume: instrumentMap.ride.volume },
     }
   }
 
@@ -112,17 +148,17 @@ export function getKitConfig(kitLibrary, tomTone, floorTomTone) {
     baseUrl: TONEJS_BASE_URL,
     volume: -4,
     files: {
-      kick: 'kick.mp3',
-      tom: getTomFile(kitLibrary, tomPreset),
-      midTom: 'tom2.mp3',
-      lowTom: 'tom3.mp3',
-      floorTom: getTomFile(kitLibrary, floorTomPreset),
-      hihat: 'hihat.mp3',
-      hihatOpen: 'hihat.mp3',
-      ride: 'hihat.mp3',
+        kick: instrumentMap.kick.url.replace(TONEJS_BASE_URL, ''),
+        tom: instrumentMap.tom.url.replace(TONEJS_BASE_URL, ''),
+        midTom: instrumentMap.midTom.url.replace(TONEJS_BASE_URL, ''),
+        lowTom: instrumentMap.lowTom.url.replace(TONEJS_BASE_URL, ''),
+        floorTom: instrumentMap.floorTom.url.replace(TONEJS_BASE_URL, ''),
+        hihat: instrumentMap.hihat_close.url.replace(TONEJS_BASE_URL, ''),
+        hihatOpen: instrumentMap.hihat_open.url.replace(TONEJS_BASE_URL, ''),
+        ride: instrumentMap.ride.url.replace(TONEJS_BASE_URL, ''),
     },
-    hihat: { rate: 1.08, volume: -7 },
-    hihatOpen: { rate: 0.9, volume: -4.5 },
-    ride: { rate: 1, volume: -8 },
+      hihat: { rate: instrumentMap.hihat_close.rate, volume: instrumentMap.hihat_close.volume },
+      hihatOpen: { rate: instrumentMap.hihat_open.rate, volume: instrumentMap.hihat_open.volume },
+      ride: { rate: instrumentMap.ride.rate, volume: instrumentMap.ride.volume },
   }
 }

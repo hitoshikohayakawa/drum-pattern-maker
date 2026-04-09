@@ -192,6 +192,7 @@ export function legacyNotationPatternToCanonical(
   const accentRow = Array.isArray(pattern?.accentRow) ? pattern.accentRow : []
   const kickRow = Array.isArray(pattern?.kickRow) ? pattern.kickRow : []
   const accentMarks = Array.isArray(pattern?.accentMarks) ? pattern.accentMarks : []
+  const ghostMarks = Array.isArray(pattern?.ghostMarks) ? pattern.ghostMarks : []
   const restMarks = Array.isArray(pattern?.restMarks) ? pattern.restMarks : []
   const events = []
 
@@ -210,6 +211,9 @@ export function legacyNotationPatternToCanonical(
     }
 
     const upperNotes = notesFromLegacySymbol(accentRow[index], isAccentExercise)
+    if (ghostMarks[index] && !upperNotes.some((note) => note.instrument === 'snare')) {
+      upperNotes.push({ instrument: 'snare', modifiers: { ghost: true } })
+    }
     const lowerRow = String(kickRow[index] || '')
     const lowerNotes = [
       ...(lowerRow.includes('●') ? [{ instrument: 'bass_drum' }] : []),
@@ -220,13 +224,20 @@ export function legacyNotationPatternToCanonical(
       ...upperNotes,
       ...lowerNotes,
     ]).map((note) => {
-      if (!accentMarks[index] || note.instrument === 'bass_drum') return note
+      const modifiers = {
+        ...(note.modifiers || {}),
+      }
+
+      if (ghostMarks[index] && note.instrument === 'snare') {
+        modifiers.ghost = true
+        delete modifiers.accent
+      } else if (accentMarks[index] && note.instrument !== 'bass_drum') {
+        modifiers.accent = true
+      }
+
       return {
         ...note,
-        modifiers: {
-          ...(note.modifiers || {}),
-          accent: true,
-        },
+        modifiers: Object.keys(modifiers).length ? modifiers : undefined,
       }
     })
 

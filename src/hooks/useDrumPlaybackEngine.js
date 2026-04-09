@@ -3,6 +3,7 @@ import * as Tone from 'tone'
 
 import {
   FLOOR_TOM_TONE_PRESETS,
+  getInstrumentSampleMap,
   SNARE_LIBRARY_RATE_OVERRIDES,
   SNARE_LIBRARY_SOURCES,
   SNARE_TONE_PRESETS,
@@ -49,6 +50,7 @@ export function useDrumPlaybackEngine({
 }) {
   const drumKitRef = useRef(null)
   const cymbalPlayerRef = useRef(null)
+  const footHiHatPlayerRef = useRef(null)
   const snarePlayersRef = useRef({
     accent: [],
     normal: [],
@@ -91,6 +93,8 @@ export function useDrumPlaybackEngine({
       Tone.Transport.cancel()
       cymbalPlayerRef.current?.stop()
       cymbalPlayerRef.current?.dispose()
+      footHiHatPlayerRef.current?.stop()
+      footHiHatPlayerRef.current?.dispose()
       snareHighPassRef.current?.dispose()
       snareLowPassRef.current?.dispose()
       snareCompressorRef.current?.dispose()
@@ -213,11 +217,12 @@ export function useDrumPlaybackEngine({
   useEffect(() => {
     const cymbalSource = getCymbalSource(kitLibrary, cymbalTone)
     const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
-    if (!cymbalSource || !kitConfig) return
+    const instrumentSampleMap = getInstrumentSampleMap(kitLibrary, tomTone, floorTomTone, cymbalTone)
+    if (!cymbalSource || !kitConfig || !instrumentSampleMap.foot_hihat?.url) return
 
     setKitReady(false)
     let cancelled = false
-    let pendingLoads = 2
+    let pendingLoads = 3
     const markLoaded = () => {
       if (cancelled) return
       pendingLoads -= 1
@@ -228,6 +233,12 @@ export function useDrumPlaybackEngine({
       cymbalPlayerRef.current.stop()
       cymbalPlayerRef.current.dispose()
       cymbalPlayerRef.current = null
+    }
+
+    if (footHiHatPlayerRef.current) {
+      footHiHatPlayerRef.current.stop()
+      footHiHatPlayerRef.current.dispose()
+      footHiHatPlayerRef.current = null
     }
 
     const players = new Tone.Players(
@@ -250,12 +261,22 @@ export function useDrumPlaybackEngine({
     }).toDestination()
     cymbalPlayerRef.current = cymbalPlayer
 
+    const footHiHatPlayer = new Tone.Player({
+      url: instrumentSampleMap.foot_hihat.url,
+      fadeOut: instrumentSampleMap.foot_hihat.fadeOut,
+      onload: markLoaded,
+      onerror: () => markLoaded(),
+    }).toDestination()
+    footHiHatPlayerRef.current = footHiHatPlayer
+
     return () => {
       cancelled = true
       players.stopAll()
       players.dispose()
       cymbalPlayer.stop()
       cymbalPlayer.dispose()
+      footHiHatPlayer.stop()
+      footHiHatPlayer.dispose()
     }
   }, [kitLibrary, tomTone, floorTomTone, cymbalTone])
 
@@ -265,6 +286,7 @@ export function useDrumPlaybackEngine({
     playEventIdRef.current = null
     drumKitRef.current?.stopAll?.()
     cymbalPlayerRef.current?.stop()
+    footHiHatPlayerRef.current?.stop()
     Object.values(snarePlayersRef.current).flat().forEach((player) => {
       player?.stop()
     })
@@ -305,6 +327,20 @@ export function useDrumPlaybackEngine({
     )
   }
 
+  const triggerFootHiHat = (time, accent = false) => {
+    const sampleMap = getInstrumentSampleMap(kitLibrary, tomTone, floorTomTone, cymbalTone)
+    const footHiHatSource = sampleMap.foot_hihat
+    const footHiHatPlayer = footHiHatPlayerRef.current
+    if (!footHiHatPlayer?.loaded || !footHiHatSource?.url) return
+
+    stopAndStartPlayer(
+      footHiHatPlayer,
+      time,
+      footHiHatSource.rate,
+      getAccentVolume(footHiHatSource.volume, accent)
+    )
+  }
+
   const triggerStep = (step, time) => {
     const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
     const accent = Boolean(step?.accent)
@@ -327,10 +363,7 @@ export function useDrumPlaybackEngine({
       })
     }
     if (instruments.includes('foot_hihat')) {
-      triggerKitPlayer('hihat', time, {
-        playbackRate: kitConfig.hihat.rate,
-        volume: (kitConfig.hihat.volume ?? 0) - 2,
-      })
+      triggerFootHiHat(time, accent)
     }
     if (instruments.includes('hihat_open')) {
       triggerKitPlayer('hihatOpen', time, {

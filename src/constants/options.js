@@ -81,6 +81,11 @@ export const FILL_GROOVE_OPTIONS = [
   { value: 'soca', label: 'ソカ' },
 ]
 
+export const FILL_GROOVE_LOCK_OPTIONS = [
+  { value: '4bars', label: '4小節固定' },
+  { value: 'all', label: '全て固定' },
+]
+
 export const FILL_GENRE_OPTIONS = [
   { value: 'rock', label: 'ROCK' },
   { value: 'pops', label: 'POPS' },

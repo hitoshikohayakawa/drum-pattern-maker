@@ -1,3 +1,12 @@
+import {
+  canonicalToLegacyFillSteps,
+  canonicalToNotationView,
+  canonicalToPlaybackSequence,
+  legacyFillStepsToCanonical,
+  legacyNotationPatternToCanonical,
+  parseCanonicalPatternJson,
+} from './canonicalRhythm.js'
+
 const TOKEN_BY_INSTRUMENT = {
   hihat_close: 'H',
   hihat_open: 'O',
@@ -12,6 +21,8 @@ const TOKEN_BY_INSTRUMENT = {
 
 export const FILL_RESOLUTION_OPTIONS = [
   { value: '16th', label: '16分固定' },
+  { value: '8th_triplet', label: '8分3連' },
+  { value: '16th_triplet', label: '16分3連' },
   { value: '32nd', label: '32分固定' },
 ]
 
@@ -47,6 +58,8 @@ export const FILL_EDITOR_INSTRUMENTS = [
 ]
 
 export function getStepsPerBarForResolution(resolution = '16th') {
+  if (resolution === '8th_triplet') return 12
+  if (resolution === '16th_triplet') return 24
   return resolution === '32nd' ? 32 : 16
 }
 
@@ -61,6 +74,7 @@ export function createEmptyFillSteps(fillLengthType = 'full_bar', resolution = '
     index,
     instruments: [],
     accent: false,
+    ghost: false,
     isRest: false,
   }))
 }
@@ -79,6 +93,7 @@ export function normalizeFillSteps(rawSteps, fillLengthType = 'full_bar', resolu
         ? step.instruments.filter((instrument) => instrument === 'bass_drum' || TOKEN_BY_INSTRUMENT[instrument])
         : [],
       accent: Boolean(step.accent),
+      ghost: Boolean(step.ghost),
       isRest: Boolean(step.isRest || step.instruments?.includes('rest')),
     }
   })
@@ -93,7 +108,7 @@ export function toggleInstrumentInFillSteps(steps, stepIndex, instrumentId) {
     if (instrumentId === 'rest') {
       return step.isRest
         ? { ...step, isRest: false }
-        : { ...step, isRest: true, instruments: [], accent: false }
+        : { ...step, isRest: true, instruments: [], accent: false, ghost: false }
     }
 
     const exists = step.instruments.includes(instrumentId)
@@ -115,43 +130,22 @@ export function toggleAccentInFillSteps(steps, stepIndex) {
   ))
 }
 
+export function toggleGhostInFillSteps(steps, stepIndex) {
+  return steps.map((step) => (
+    step.index === stepIndex
+      ? { ...step, ghost: step.isRest ? false : !step.ghost }
+      : step
+  ))
+}
+
 export function buildNotationPatternFromFillSteps(
   steps,
   fillLengthType = 'full_bar',
   resolution = '16th',
 ) {
-  const totalSteps = getTotalSteps(fillLengthType, resolution)
-  const normalized = normalizeFillSteps(steps, fillLengthType, resolution)
-  const accentRow = Array(totalSteps).fill('')
-  const kickRow = Array(totalSteps).fill('')
-  const accentMarks = Array(totalSteps).fill(false)
-  const restMarks = Array(totalSteps).fill(false)
-
-  normalized.forEach((step) => {
-    if (step.isRest) {
-      restMarks[step.index] = true
-      return
-    }
-
-    const upperTokens = step.instruments
-      .filter((instrument) => instrument !== 'bass_drum')
-      .map((instrument) => TOKEN_BY_INSTRUMENT[instrument])
-      .filter(Boolean)
-
-    accentRow[step.index] = [...new Set(upperTokens)].join('')
-    kickRow[step.index] = step.instruments.includes('bass_drum') ? '●' : ''
-    accentMarks[step.index] = step.accent
-  })
-
-  return {
-    accentRow,
-    kickRow,
-    accentMarks,
-    restMarks,
-    resolution,
-    stepsPerBar: getStepsPerBarForResolution(resolution),
-    totalSteps,
-  }
+  return canonicalToNotationView(
+    legacyFillStepsToCanonical(steps, fillLengthType, resolution)
+  )
 }
 
 export function buildPlaybackSequenceFromFillSteps(
@@ -159,14 +153,9 @@ export function buildPlaybackSequenceFromFillSteps(
   fillLengthType = 'full_bar',
   resolution = '16th',
 ) {
-  const normalized = normalizeFillSteps(steps, fillLengthType, resolution)
-
-  return normalized.map((step) => ({
-    index: step.index,
-    instruments: step.isRest ? [] : [...step.instruments],
-    accent: step.isRest ? false : step.accent,
-    isRest: step.isRest,
-  }))
+  return canonicalToPlaybackSequence(
+    legacyFillStepsToCanonical(steps, fillLengthType, resolution)
+  )
 }
 
 export function buildFillPhraseFromStoredPattern(patternRecord) {
@@ -174,27 +163,15 @@ export function buildFillPhraseFromStoredPattern(patternRecord) {
   const resolution = patternRecord?.resolution || '16th'
   if (resolution !== '16th') return null
 
-  const totalSteps = getTotalSteps(fillLengthType, resolution)
-  const normalized = parseStoredStepsJson(patternRecord?.steps_json, fillLengthType, resolution)
-  const accentRow = Array(totalSteps).fill('')
-  const kickRow = Array(totalSteps).fill('')
-  const restMarks = Array(totalSteps).fill(false)
-
-  normalized.forEach((step) => {
-    if (step.isRest) {
-      restMarks[step.index] = true
-      return
-    }
-    const upperTokens = step.instruments
-      .filter((instrument) => instrument !== 'bass_drum')
-      .map((instrument) => TOKEN_BY_INSTRUMENT[instrument])
-      .filter(Boolean)
-
-    accentRow[step.index] = [...new Set(upperTokens)].join('')
-    if (step.instruments.includes('bass_drum')) {
-      kickRow[step.index] = '●'
-    }
-  })
+  const notationPattern = buildNotationPatternFromStoredPatternRecord(
+    patternRecord,
+    fillLengthType,
+    resolution
+  )
+  const totalSteps = notationPattern.totalSteps || getTotalSteps(fillLengthType, resolution)
+  const accentRow = Array.from({ length: totalSteps }, (_, index) => notationPattern.accentRow?.[index] || '')
+  const kickRow = Array.from({ length: totalSteps }, (_, index) => notationPattern.kickRow?.[index] || '')
+  const restMarks = Array.from({ length: totalSteps }, (_, index) => Boolean(notationPattern.restMarks?.[index]))
 
   return {
     hand: accentRow,
@@ -207,52 +184,23 @@ export function buildFillPhraseFromStoredPattern(patternRecord) {
 }
 
 export function buildSequenceFromPracticePatterns(patterns, practiceMode) {
-  const mergedAccentRow = []
-  const mergedKickRow = []
-  const mergedAccentMarks = []
+  let globalIndexOffset = 0
 
-  patterns.forEach((pattern) => {
-    mergedAccentRow.push(...(pattern.accentRow || []))
-    mergedKickRow.push(...(pattern.kickRow || []))
-    if (Array.isArray(pattern.accentMarks)) {
-      mergedAccentMarks.push(...pattern.accentMarks)
-    } else {
-      mergedAccentMarks.push(...Array(pattern.totalSteps || pattern.accentRow?.length || 0).fill(false))
-    }
-  })
+  return patterns.flatMap((pattern) => {
+    const canonicalPattern = legacyNotationPatternToCanonical(pattern, {
+      patternKind: practiceMode === 'fillin' ? 'fill' : 'exercise',
+      isAccentExercise: practiceMode === 'accent',
+      fillLengthType: 'full_bar',
+    })
 
-  return mergedAccentRow.map((symbol, index) => {
-    const instruments = []
-    const upper = String(symbol || '')
-    const kick = String(mergedKickRow[index] || '')
-    const accent = Boolean(mergedAccentMarks[index] || upper.includes('＜') || (practiceMode === 'accent' && upper))
+    const playbackSequence = canonicalToPlaybackSequence(canonicalPattern)
+    const offsetSequence = playbackSequence.map((step) => ({
+      ...step,
+      index: step.index + globalIndexOffset,
+    }))
 
-    if (practiceMode === 'accent') {
-      if (upper.includes('✕') || upper.includes('C')) instruments.push('crash')
-      if (upper.includes('△') || upper.includes('▲')) {
-        instruments.push(index % 2 === 0 ? 'floor_tom' : 'hi_tom')
-      }
-      if (!upper) {
-        instruments.push('ghost_snare')
-      } else if (!instruments.includes('snare')) {
-        instruments.push('snare')
-      }
-    } else {
-      Object.entries(INSTRUMENT_BY_TOKEN).forEach(([token, instrument]) => {
-        if (upper.includes(token)) instruments.push(instrument)
-      })
-      if ((upper.includes('△') || upper.includes('▲')) && !instruments.includes('floor_tom')) {
-        instruments.push(index % 2 === 0 ? 'floor_tom' : 'hi_tom')
-      }
-    }
-
-    if (kick.includes('●')) instruments.push('bass_drum')
-
-    return {
-      index,
-      instruments: [...new Set(instruments)],
-      accent,
-    }
+    globalIndexOffset += playbackSequence.length
+    return offsetSequence
   })
 }
 
@@ -274,4 +222,134 @@ export function parseStoredStepsJson(
   } catch {
     return createEmptyFillSteps(fillLengthType, resolution)
   }
+}
+
+export function buildCanonicalPatternFromFillSteps(
+  steps,
+  fillLengthType = 'full_bar',
+  resolution = '16th',
+) {
+  return legacyFillStepsToCanonical(steps, fillLengthType, resolution)
+}
+
+export function buildPatternJsonFromFillSteps(
+  steps,
+  fillLengthType = 'full_bar',
+  resolution = '16th',
+) {
+  return buildCanonicalPatternFromFillSteps(steps, fillLengthType, resolution)
+}
+
+export function buildCanonicalPatternFromStoredPatternRecord(
+  patternRecord,
+  fallbackFillLengthType = 'full_bar',
+  fallbackResolution = '16th',
+) {
+  const fillLengthType = patternRecord?.fill_length_type || fallbackFillLengthType
+  const resolution = patternRecord?.resolution || fallbackResolution
+  const canonicalPattern = parseCanonicalPatternJson(patternRecord?.pattern_json)
+
+  if (canonicalPattern?.events) {
+    return canonicalPattern
+  }
+
+  return buildCanonicalPatternFromFillSteps(
+    parseStoredStepsJson(patternRecord?.steps_json, fillLengthType, resolution),
+    fillLengthType,
+    resolution
+  )
+}
+
+export function parseStoredPatternRecordToFillSteps(
+  patternRecord,
+  fallbackFillLengthType = 'full_bar',
+  fallbackResolution = '16th',
+) {
+  const fillLengthType = patternRecord?.fill_length_type || fallbackFillLengthType
+  const resolution = patternRecord?.resolution || fallbackResolution
+  const canonicalPattern = buildCanonicalPatternFromStoredPatternRecord(
+    patternRecord,
+    fillLengthType,
+    resolution
+  )
+
+  return normalizeFillSteps(
+    canonicalToLegacyFillSteps(canonicalPattern),
+    fillLengthType,
+    resolution
+  )
+}
+
+export function buildNotationPatternFromStoredPatternRecord(
+  patternRecord,
+  fallbackFillLengthType = 'full_bar',
+  fallbackResolution = '16th',
+) {
+  const fillLengthType = patternRecord?.fill_length_type || fallbackFillLengthType
+  const resolution = patternRecord?.resolution || fallbackResolution
+  return canonicalToNotationView(
+    buildCanonicalPatternFromStoredPatternRecord(
+      patternRecord,
+      fillLengthType,
+      resolution
+    )
+  )
+}
+
+export function buildPlaybackSequenceFromStoredPatternRecord(
+  patternRecord,
+  fallbackFillLengthType = 'full_bar',
+  fallbackResolution = '16th',
+) {
+  const fillLengthType = patternRecord?.fill_length_type || fallbackFillLengthType
+  const resolution = patternRecord?.resolution || fallbackResolution
+  return canonicalToPlaybackSequence(
+    buildCanonicalPatternFromStoredPatternRecord(
+      patternRecord,
+      fillLengthType,
+      resolution
+    )
+  )
+}
+
+export function buildNotationPatternFromPracticePattern(
+  pattern,
+  practiceMode,
+) {
+  return canonicalToNotationView(
+    buildCanonicalPatternFromPracticePattern(pattern, practiceMode)
+  )
+}
+
+export function buildCanonicalPatternFromPracticePattern(
+  pattern,
+  practiceMode,
+) {
+  return legacyNotationPatternToCanonical(pattern, {
+    patternKind: practiceMode === 'fillin' ? 'fill' : 'exercise',
+    isAccentExercise: practiceMode === 'accent',
+    fillLengthType: 'full_bar',
+  })
+}
+
+export function buildNotationPatternsFromCanonicalPatterns(patterns = []) {
+  return patterns.map((pattern) => canonicalToNotationView(pattern))
+}
+
+export function buildPlaybackSequenceFromCanonicalPatterns(patterns = []) {
+  let globalIndexOffset = 0
+  let globalTickOffset = 0
+
+  return patterns.flatMap((pattern) => {
+    const playbackSequence = canonicalToPlaybackSequence(pattern)
+    const offsetSequence = playbackSequence.map((step) => ({
+      ...step,
+      index: step.index + globalIndexOffset,
+      startTick: step.startTick + globalTickOffset,
+    }))
+
+    globalIndexOffset += playbackSequence.length
+    globalTickOffset += pattern?.totalTicks || 0
+    return offsetSequence
+  })
 }

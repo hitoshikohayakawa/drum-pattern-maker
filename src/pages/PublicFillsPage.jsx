@@ -6,12 +6,16 @@ import { useDrumPlaybackEngine } from '../hooks/useDrumPlaybackEngine'
 import {
   FILL_LENGTH_OPTIONS,
   FILL_RESOLUTION_OPTIONS,
-  buildNotationPatternFromFillSteps,
-  buildPlaybackSequenceFromFillSteps,
-  parseStoredStepsJson,
+  buildCanonicalPatternFromStoredPatternRecord,
+  buildNotationPatternFromStoredPatternRecord,
+  buildPlaybackSequenceFromStoredPatternRecord,
 } from '../utils/fillEditorModel'
 import { formatProfileName, getProfileInitial } from '../utils/profileUtils'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
+
+function isMissingPatternJsonColumn(error) {
+  return String(error?.message || '').includes('pattern_json')
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -42,22 +46,16 @@ function buildPublicFillViewModel(patterns, profiles, likes, currentUserId) {
   })
 
   return (patterns || []).map((item) => {
-    const parsedSteps = parseStoredStepsJson(
-      item.steps_json,
-      item.fill_length_type || 'full_bar',
-      item.resolution || '16th'
-    )
-
     return {
       ...item,
       author: profileMap.get(item.owner_user_id) || null,
-      notationPattern: buildNotationPatternFromFillSteps(
-        parsedSteps,
+      notationPattern: buildNotationPatternFromStoredPatternRecord(
+        item,
         item.fill_length_type || 'full_bar',
         item.resolution || '16th'
       ),
-      playbackSequence: buildPlaybackSequenceFromFillSteps(
-        parsedSteps,
+      playbackSequence: buildPlaybackSequenceFromStoredPatternRecord(
+        item,
         item.fill_length_type || 'full_bar',
         item.resolution || '16th'
       ),
@@ -100,11 +98,19 @@ export default function PublicFillsPage({ navigate }) {
     setIsLoading(true)
     setErrorMessage('')
 
-    const { data: patternData, error: patternError } = await supabase
+    let { data: patternData, error: patternError } = await supabase
       .from('fill_patterns')
-      .select('id, owner_user_id, title, fill_length_type, resolution, steps_json, created_at, updated_at, visibility')
+      .select('id, owner_user_id, title, fill_length_type, resolution, steps_json, pattern_json, created_at, updated_at, visibility')
       .eq('visibility', 'public')
       .order('created_at', { ascending: false })
+
+    if (isMissingPatternJsonColumn(patternError)) {
+      ;({ data: patternData, error: patternError } = await supabase
+        .from('fill_patterns')
+        .select('id, owner_user_id, title, fill_length_type, resolution, steps_json, created_at, updated_at, visibility')
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false }))
+    }
 
     if (patternError) {
       setErrorMessage(patternError.message)
@@ -187,7 +193,7 @@ export default function PublicFillsPage({ navigate }) {
 
     if (!supabase) return
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('fill_patterns')
       .insert({
         owner_user_id: user.id,
@@ -201,7 +207,30 @@ export default function PublicFillsPage({ navigate }) {
         visibility: 'private',
         include_in_practice: false,
         steps_json: item.steps_json,
+        pattern_json: buildCanonicalPatternFromStoredPatternRecord(
+          item,
+          item.fill_length_type || 'full_bar',
+          item.resolution || '16th'
+        ),
       })
+
+    if (isMissingPatternJsonColumn(error)) {
+      ;({ error } = await supabase
+        .from('fill_patterns')
+        .insert({
+          owner_user_id: user.id,
+          title: item.title,
+          description: '',
+          category: 'fill_in',
+          fill_length_type: item.fill_length_type || 'full_bar',
+          time_signature: '4/4',
+          resolution: item.resolution || '16th',
+          notation_rule_set: 'dpm_jp_v1',
+          visibility: 'private',
+          include_in_practice: false,
+          steps_json: item.steps_json,
+        }))
+    }
 
     if (error) {
       setErrorMessage(error.message)
@@ -291,7 +320,7 @@ export default function PublicFillsPage({ navigate }) {
                   type="button"
                   onClick={() => {
                     setActivePatternId(item.id)
-                    playSequence(item.playbackSequence, item.resolution || '16th')
+                    playSequence(item.playbackSequence, item.resolution || '16th', 'standard')
                   }}
                   disabled={!samplesReady || isPlaying}
                 >

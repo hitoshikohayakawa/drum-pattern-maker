@@ -1,3 +1,5 @@
+import { legacyNotationPatternToCanonical } from './canonicalRhythm.js'
+
 const TOTAL_BARS_PER_PAGE = 16
 const CELL_SIZE = 4
 
@@ -195,4 +197,14 @@ function createAccentPagePatterns(noteType, difficulty, fixedBars, orchestration
 
 export function createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting) {
   return createAccentPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
+}
+
+export function createCanonicalPagePatterns(noteType, difficulty, bars, orchestration, kickSetting) {
+  return createAccentPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
+    .map((pattern) => legacyNotationPatternToCanonical(pattern, {
+      patternKind: 'exercise',
+      isAccentExercise: true,
+      fillLengthType: 'full_bar',
+      resolution: noteType,
+    }))
 }

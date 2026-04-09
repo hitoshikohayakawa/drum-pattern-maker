@@ -12,15 +12,31 @@ import {
 } from '../constants/kitConfig'
 import { stopAndStartPlayer, unlockAudioContext } from '../utils/audioUtils'
 
+const CANONICAL_PPQ = 192
+
 function getToneStepDuration(stepUnit) {
   if (stepUnit === '4th') return '4n'
   if (stepUnit === '8th') return '8n'
+  if (stepUnit === '8th_triplet') return '8t'
+  if (stepUnit === '16th_triplet') return '16t'
   if (stepUnit === '32nd') return '32n'
   return '16n'
 }
 
 function getAccentVolume(baseVolume, accent) {
   return accent ? (baseVolume ?? 0) + 2 : baseVolume
+}
+
+function getSnareVolumeOffset(kind, playbackMode = 'standard') {
+  if (playbackMode === 'accent_exercise') {
+    if (kind === 'accent') return 3
+    if (kind === 'ghost') return -18
+    return -11
+  }
+
+  if (kind === 'accent') return 8
+  if (kind === 'ghost') return -18
+  return 0
 }
 
 export function useDrumPlaybackEngine({
@@ -47,6 +63,7 @@ export function useDrumPlaybackEngine({
   const snareLowPassRef = useRef(null)
   const snareCompressorRef = useRef(null)
   const playEventIdRef = useRef(null)
+  const playbackModeRef = useRef('standard')
 
   const [kitReady, setKitReady] = useState(false)
   const [snareReady, setSnareReady] = useState(false)
@@ -174,15 +191,15 @@ export function useDrumPlaybackEngine({
 
     players.accent.forEach((player) => {
       player.playbackRate = libraryRate
-      player.volume.value = preset.volume + 3
+      player.volume.value = preset.volume + getSnareVolumeOffset('accent', playbackModeRef.current)
     })
     players.normal.forEach((player) => {
       player.playbackRate = libraryRate
-      player.volume.value = preset.volume - 11
+      player.volume.value = preset.volume + getSnareVolumeOffset('normal', playbackModeRef.current)
     })
     players.ghost.forEach((player) => {
       player.playbackRate = libraryRate
-      player.volume.value = preset.volume - 18
+      player.volume.value = preset.volume + getSnareVolumeOffset('ghost', playbackModeRef.current)
     })
 
     snareHighPassRef.current.frequency.value = preset.hpf
@@ -255,12 +272,18 @@ export function useDrumPlaybackEngine({
     setIsPlaying(false)
   }
 
-  const triggerSnare = (kind, time) => {
+  const triggerSnare = (kind, time, playbackMode = 'standard') => {
     const pool = snarePlayersRef.current[kind]
     if (!pool?.length) return
     const voiceIndex = snareVoiceIndexRef.current[kind] % pool.length
     const player = pool[voiceIndex]
+    const preset = SNARE_TONE_PRESETS[snareTone]
+    const libraryRate = SNARE_LIBRARY_RATE_OVERRIDES[kitLibrary]?.[snareTone] ?? preset?.rate
     snareVoiceIndexRef.current[kind] = (voiceIndex + 1) % pool.length
+    if (preset) {
+      player.playbackRate = libraryRate
+      player.volume.value = preset.volume + getSnareVolumeOffset(kind, playbackMode)
+    }
     stopAndStartPlayer(player, time)
   }
 
@@ -286,20 +309,27 @@ export function useDrumPlaybackEngine({
     const kitConfig = getKitConfig(kitLibrary, tomTone, floorTomTone)
     const accent = Boolean(step?.accent)
     const instruments = step?.instruments || []
+    const playbackMode = playbackModeRef.current
 
     if (instruments.includes('bass_drum')) {
       triggerKitPlayer('kick', time)
     }
     if (instruments.includes('ghost_snare')) {
-      triggerSnare('ghost', time)
+      triggerSnare('ghost', time, playbackMode)
     }
     if (instruments.includes('snare')) {
-      triggerSnare(accent ? 'accent' : 'normal', time)
+      triggerSnare(accent ? 'accent' : 'normal', time, playbackMode)
     }
     if (instruments.includes('hihat_close')) {
       triggerKitPlayer('hihat', time, {
         playbackRate: kitConfig.hihat.rate,
         volume: getAccentVolume(kitConfig.hihat.volume, accent),
+      })
+    }
+    if (instruments.includes('foot_hihat')) {
+      triggerKitPlayer('hihat', time, {
+        playbackRate: kitConfig.hihat.rate,
+        volume: (kitConfig.hihat.volume ?? 0) - 2,
       })
     }
     if (instruments.includes('hihat_open')) {
@@ -343,11 +373,42 @@ export function useDrumPlaybackEngine({
     }
   }
 
-  const playSequence = async (steps, stepUnit = '16th') => {
+  const playSequence = async (steps, stepUnit = '16th', playbackMode = 'standard') => {
     if (!samplesReady || !Array.isArray(steps) || steps.length === 0) return
 
     await unlockAudioContext()
     stopPlayback()
+    playbackModeRef.current = playbackMode
+
+    const hasTickTiming = steps.every((step) => Number.isFinite(step?.startTick) && Number.isFinite(step?.durationTick))
+
+    if (hasTickTiming) {
+      const secondsPerTick = 60 / Tone.Transport.bpm.value / CANONICAL_PPQ
+      const lastStep = steps[steps.length - 1]
+      const endTick = lastStep.startTick + lastStep.durationTick
+
+      steps.forEach((step) => {
+        Tone.Transport.scheduleOnce((time) => {
+          Tone.Draw.schedule(() => {
+            setCurrentStep(step.index)
+          }, time)
+
+          triggerStep(step, time)
+        }, step.startTick * secondsPerTick)
+      })
+
+      Tone.Transport.scheduleOnce((time) => {
+        Tone.Draw.schedule(() => {
+          setCurrentStep(null)
+          setIsPlaying(false)
+        }, time)
+        Tone.Transport.stop(time)
+      }, endTick * secondsPerTick)
+
+      Tone.Transport.start()
+      setIsPlaying(true)
+      return
+    }
 
     let cursor = 0
     const duration = getToneStepDuration(stepUnit)

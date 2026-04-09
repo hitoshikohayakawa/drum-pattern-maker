@@ -1,20 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 
 function getDurationCode(noteType, mode, resolution = '16th') {
-  if (mode === 'fillin') return resolution === '32nd' ? '32' : '16'
+  if (mode === 'fillin') {
+    if (resolution === '32nd') return '32'
+    if (resolution === '8th_triplet') return '8'
+    if (resolution === '16th_triplet') return '16'
+    return '16'
+  }
   if (noteType === '4th') return '4'
   if (noteType === '8th') return '8'
   return '16'
 }
 
 function getStepCountForBar(noteType, mode, resolution = '16th') {
-  if (mode === 'fillin') return resolution === '32nd' ? 32 : 16
+  if (mode === 'fillin') {
+    if (resolution === '32nd') return 32
+    if (resolution === '8th_triplet') return 12
+    if (resolution === '16th_triplet') return 24
+    return 16
+  }
   if (noteType === '4th') return 4
   if (noteType === '8th') return 8
   return 16
 }
 
-function getBeamGroupFractions(vexflow, noteType, mode) {
+function getBeamGroupFractions(vexflow, noteType, mode, resolution = '16th') {
   const { Fraction } = vexflow
 
   if (mode === 'fillin') {
@@ -27,6 +37,68 @@ function getBeamGroupFractions(vexflow, noteType, mode) {
     return [new Fraction(1, 4)]
   }
   return [new Fraction(1, 4)]
+}
+
+function buildTupletGroupsForBar(barTickables, stepsPerBar, resolvedFillResolution) {
+  if (resolvedFillResolution !== '8th_triplet' && resolvedFillResolution !== '16th_triplet') return []
+  const tuplets = []
+  const groupSize = resolvedFillResolution === '16th_triplet' ? 6 : 3
+  const groupCount = Math.floor(stepsPerBar / groupSize)
+
+  for (let groupIndex = 0; groupIndex < groupCount; groupIndex += 1) {
+    const start = groupIndex * groupSize
+    const group = barTickables.slice(start, start + groupSize)
+    if (group.length === groupSize) {
+      tuplets.push({
+        notes: group,
+        options: resolvedFillResolution === '16th_triplet'
+          ? {
+              num_notes: 6,
+              notes_occupied: 4,
+              bracketed: true,
+              ratioed: false,
+            }
+          : {
+              num_notes: 3,
+              notes_occupied: 2,
+              bracketed: true,
+              ratioed: false,
+            },
+      })
+    }
+  }
+
+  return tuplets
+}
+
+function buildBeamsForBar({
+  Beam,
+  beamGroups,
+  beamGroupsFraction,
+  resolvedFillResolution,
+  flatBeamOffset,
+  tupletGroups,
+}) {
+  if (resolvedFillResolution === '8th_triplet' || resolvedFillResolution === '16th_triplet') {
+    return tupletGroups
+      .map(({ notes }) => notes)
+      .filter((notes) => notes.length > 1)
+      .map((notes) => {
+        const beam = new Beam(notes)
+        beam.render_options.flat_beams = true
+        beam.render_options.flat_beam_offset = flatBeamOffset
+        return beam
+      })
+  }
+
+  return Beam.generateBeams(beamGroups, {
+    groups: beamGroupsFraction,
+    beam_rests: false,
+    show_stemlets: false,
+    maintain_stem_directions: true,
+    flat_beams: true,
+    flat_beam_offset: flatBeamOffset,
+  })
 }
 
 function getVoice1Keys(symbol, mode, stepIndex = 0) {
@@ -58,12 +130,30 @@ function getVoice2Keys(symbol) {
   const str = String(symbol)
   const keys = []
   if (str.includes('●')) keys.push('f/4') // Kick
+  if (str.includes('P')) keys.push('d/4/x2') // Foot hihat
   return keys
 }
 
 function createGhostNote(vexflow, duration) {
   const { GhostNote } = vexflow
   return new GhostNote({ duration })
+}
+
+function createInvisibleStemmedNote(vexflow, duration, stemDirection) {
+  const { StaveNote } = vexflow
+  const note = new StaveNote({
+    keys: ['b/4'],
+    duration,
+    clef: 'percussion',
+    stem_direction: stemDirection,
+  })
+  if (typeof note.setStyle === 'function') {
+    note.setStyle({
+      fillStyle: 'rgba(0,0,0,0)',
+      strokeStyle: 'rgba(0,0,0,0)',
+    })
+  }
+  return note
 }
 
 function getDurationForSpan(baseDuration, span) {
@@ -126,13 +216,17 @@ function buildVoiceData({
   baseDuration,
   mode,
   preserveStepTiming = false,
+  useStemmedPlaceholders = false,
+  renderEmptyAsRests = false,
   accentMarks = null,
+  ghostMarks = null,
   restMarks = null,
 }) {
   const tickables = []
   const beamGroups = Array.from({ length: barCount }, () => [])
   const tickablesByBar = Array.from({ length: barCount }, () => [])
   const accentNotesByBar = Array.from({ length: barCount }, () => [])
+  const ghostNotesByBar = Array.from({ length: barCount }, () => [])
   const noteEntriesByBar = Array.from({ length: barCount }, () => [])
   
   for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
@@ -181,6 +275,9 @@ function buildVoiceData({
           if (isAccent) {
             accentNotesByBar[barIndex].push(note)
           }
+          if (ghostMarks?.[stepIndex]) {
+            ghostNotesByBar[barIndex].push(note)
+          }
           if (strSym.includes('O')) {
              note.addModifier(
                new Articulation('ah')
@@ -207,16 +304,29 @@ function buildVoiceData({
         tickablesByBar[barIndex].push(restNote)
         noteEntriesByBar[barIndex].push({ note: restNote, start: stepIndex, end: stepIndex + span })
       } else {
-        const ghostNote = createGhostNote(vexflow, duration)
-        tickables.push(ghostNote)
-        tickablesByBar[barIndex].push(ghostNote)
+        let placeholder
+        if (renderEmptyAsRests) {
+          const { StaveNote } = vexflow
+          placeholder = new StaveNote({
+            keys: ['b/4'],
+            duration: `${duration}r`,
+            clef: 'percussion',
+            stem_direction: stemDirection,
+          })
+        } else {
+          placeholder = useStemmedPlaceholders
+            ? createInvisibleStemmedNote(vexflow, duration, stemDirection)
+            : createGhostNote(vexflow, duration)
+        }
+        tickables.push(placeholder)
+        tickablesByBar[barIndex].push(placeholder)
       }
 
       stepIndex += span
     }
   }
 
-  return { tickables, beamGroups, tickablesByBar, accentNotesByBar, noteEntriesByBar }
+  return { tickables, beamGroups, tickablesByBar, accentNotesByBar, ghostNotesByBar, noteEntriesByBar }
 }
 
 export default function VexFlowNotationPreview({
@@ -245,7 +355,7 @@ export default function VexFlowNotationPreview({
         const { loadBravura } = await import('../../vendor/vexflow/src/fonts/load_bravura.ts')
         if (cancelled || !containerRef.current) return
 
-        const { Beam, Flow, Formatter, Renderer, Stave, Voice } = vexflow
+        const { Beam, Flow, Formatter, Renderer, Stave, Tuplet, Voice } = vexflow
         loadBravura()
         Flow.setMusicFont('Bravura')
 
@@ -261,7 +371,17 @@ export default function VexFlowNotationPreview({
         const firstBarExtraWidth = 82
         const rightPadding = 28
         const interBarGap = 6
-        const minWidthPerBar = baseDuration === '32' ? 620 : baseDuration === '16' ? 370 : baseDuration === '8' ? 250 : 190
+        const minWidthPerBar = resolvedFillResolution === '16th_triplet'
+          ? 520
+          : resolvedFillResolution === '8th_triplet'
+            ? 340
+            : baseDuration === '32'
+            ? 620
+            : baseDuration === '16'
+              ? 370
+              : baseDuration === '8'
+                ? 250
+                : 190
         const minTotalWidth =
           leftPadding +
           firstBarExtraWidth +
@@ -306,7 +426,11 @@ export default function VexFlowNotationPreview({
           stemDirection: 1,
           baseDuration,
           mode,
+          preserveStepTiming: resolvedFillResolution === '8th_triplet' || resolvedFillResolution === '16th_triplet',
+          useStemmedPlaceholders: resolvedFillResolution === '8th_triplet' || resolvedFillResolution === '16th_triplet',
+          renderEmptyAsRests: mode === 'fillin' && resolvedFillResolution === '8th_triplet',
           accentMarks: pattern.accentMarks || null,
+          ghostMarks: mode === 'fillin' ? pattern.ghostMarks || null : null,
           restMarks: pattern.restMarks || null,
         })
 
@@ -323,7 +447,7 @@ export default function VexFlowNotationPreview({
         })
 
         let currentX = leftPadding
-        const beamGroupsFraction = getBeamGroupFractions(vexflow, noteType, mode)
+        const beamGroupsFraction = getBeamGroupFractions(vexflow, noteType, mode, resolvedFillResolution)
         for (let barIndex = 0; barIndex < barCount; barIndex += 1) {
           const currentBarWidth = barIndex === 0 ? barWidth + firstBarExtraWidth : barWidth
           const stave = new Stave(currentX, staveY, currentBarWidth)
@@ -340,22 +464,30 @@ export default function VexFlowNotationPreview({
           const formatter = new Formatter()
           formatter.joinVoices([voice1, voice2]).formatToStave([voice1, voice2], stave)
 
+          const tupletGroups = buildTupletGroupsForBar(
+            voice1Data.tickablesByBar[barIndex],
+            stepsPerBar,
+            resolvedFillResolution
+          )
+          const tuplets = tupletGroups.map(({ notes, options }) => new Tuplet(notes, options))
+
           let beams = []
           if (baseDuration !== '4') {
             const flatBeamOffset = stave.getYForLine(0) - 20
-            beams = Beam.generateBeams(voice1Data.beamGroups[barIndex], {
-              groups: beamGroupsFraction,
-              beam_rests: false,
-              show_stemlets: false,
-              maintain_stem_directions: true,
-              flat_beams: true,
-              flat_beam_offset: flatBeamOffset,
+            beams = buildBeamsForBar({
+              Beam,
+              beamGroups: voice1Data.beamGroups[barIndex],
+              beamGroupsFraction,
+              resolvedFillResolution,
+              flatBeamOffset,
+              tupletGroups,
             })
           }
 
           voice1.draw(context, stave)
           voice2.draw(context, stave)
           beams.forEach((beam) => beam.setContext(context).draw())
+          tuplets.forEach((tuplet) => tuplet.setContext(context).draw())
 
           ;[...voice1Data.noteEntriesByBar[barIndex], ...voice2Data.noteEntriesByBar[barIndex]].forEach(({ note, start, end }) => {
             const element = note.getSVGElement?.()
@@ -374,6 +506,22 @@ export default function VexFlowNotationPreview({
               const y = Math.max(topPadding, Math.min(...note.getYs()) - 34)
               const metrics = context.measureText('>')
               context.fillText('>', x - metrics.width / 2, y)
+            })
+            context.restore()
+          }
+
+          const ghostNotes = voice1Data.ghostNotesByBar[barIndex]
+          if (ghostNotes.length) {
+            context.save()
+            context.setFont('Arial', 15, '400')
+            context.setFillStyle('#111')
+            ghostNotes.forEach((note) => {
+              const x = typeof note.getAbsoluteX === 'function' ? note.getAbsoluteX() + 4 : 4
+              const ys = typeof note.getYs === 'function' ? note.getYs() : [staveY]
+              const noteHeadY = ys.length ? ys.reduce((sum, value) => sum + value, 0) / ys.length : staveY
+              const bracketY = noteHeadY + 2
+              context.fillText('(', x - 5, bracketY)
+              context.fillText(')', x + 8, bracketY)
             })
             context.restore()
           }

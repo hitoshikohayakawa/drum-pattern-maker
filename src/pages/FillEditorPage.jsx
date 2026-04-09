@@ -14,12 +14,16 @@ import {
   FILL_EDITOR_INSTRUMENTS,
   FILL_LENGTH_OPTIONS,
   FILL_RESOLUTION_OPTIONS,
+  buildCanonicalPatternFromFillSteps,
   buildNotationPatternFromFillSteps,
   buildPlaybackSequenceFromFillSteps,
+  buildPlaybackSequenceFromStoredPatternRecord,
   createEmptyFillSteps,
   getTotalSteps,
+  parseStoredPatternRecordToFillSteps,
   parseStoredStepsJson,
   toggleAccentInFillSteps,
+  toggleGhostInFillSteps,
   toggleInstrumentInFillSteps,
 } from '../utils/fillEditorModel'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
@@ -28,6 +32,10 @@ const FIXED_FILL_META = {
   category: 'fill_in',
   time_signature: '4/4',
   notation_rule_set: 'dpm_jp_v1',
+}
+
+function isMissingPatternJsonColumn(error) {
+  return String(error?.message || '').includes('pattern_json')
 }
 
 function formatDate(value) {
@@ -106,11 +114,19 @@ export default function FillEditorPage({ navigate }) {
     setIsLoadingList(true)
     setErrorMessage('')
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('fill_patterns')
-      .select('id, owner_user_id, title, description, category, fill_length_type, time_signature, resolution, notation_rule_set, visibility, include_in_practice, steps_json, created_at, updated_at')
+      .select('id, owner_user_id, title, description, category, fill_length_type, time_signature, resolution, notation_rule_set, visibility, include_in_practice, steps_json, pattern_json, created_at, updated_at')
       .eq('owner_user_id', user.id)
-      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (isMissingPatternJsonColumn(error)) {
+      ;({ data, error } = await supabase
+        .from('fill_patterns')
+        .select('id, owner_user_id, title, description, category, fill_length_type, time_signature, resolution, notation_rule_set, visibility, include_in_practice, steps_json, created_at, updated_at')
+        .eq('owner_user_id', user.id)
+        .order('created_at', { ascending: false }))
+    }
 
     if (error) {
       setErrorMessage(error.message)
@@ -165,13 +181,22 @@ export default function FillEditorPage({ navigate }) {
       visibility,
       include_in_practice: includeInPractice,
       steps_json: steps,
+      pattern_json: buildCanonicalPatternFromFillSteps(steps, fillLengthType, resolution),
     }
 
     const query = editingId
       ? supabase.from('fill_patterns').update(payload).eq('id', editingId).eq('owner_user_id', user.id).select('id').single()
       : supabase.from('fill_patterns').insert(payload).select('id').single()
 
-    const { data, error } = await query
+    let { data, error } = await query
+
+    if (isMissingPatternJsonColumn(error)) {
+      const legacyPayload = { ...payload }
+      delete legacyPayload.pattern_json
+      ;({ data, error } = editingId
+        ? await supabase.from('fill_patterns').update(legacyPayload).eq('id', editingId).eq('owner_user_id', user.id).select('id').single()
+        : await supabase.from('fill_patterns').insert(legacyPayload).select('id').single())
+    }
 
     if (error) {
       setErrorMessage(error.message)
@@ -194,7 +219,7 @@ export default function FillEditorPage({ navigate }) {
     setResolution(nextResolution)
     setIncludeInPractice(Boolean(item.include_in_practice))
     setVisibility(item.visibility || 'private')
-    setSteps(parseStoredStepsJson(item.steps_json, nextLengthType, nextResolution))
+    setSteps(parseStoredPatternRecordToFillSteps(item, nextLengthType, nextResolution))
   }
 
   const handleDeletePattern = async (id) => {
@@ -317,7 +342,7 @@ export default function FillEditorPage({ navigate }) {
 
           <section className="action-panel desktop-action-panel">
             <div className="button-row">
-              <button onClick={() => playSequence(playbackSequence, resolution)} disabled={isPlaying || !samplesReady}>再生</button>
+              <button onClick={() => playSequence(playbackSequence, resolution, 'standard')} disabled={isPlaying || !samplesReady}>再生</button>
               <button onClick={stopPlayback} disabled={!isPlaying}>停止</button>
               <button onClick={handleSave} disabled={!canSave}>{editingId ? '更新保存' : '保存'}</button>
               <button className="ghost-button" onClick={handleReset}>新規作成</button>
@@ -386,6 +411,19 @@ export default function FillEditorPage({ navigate }) {
                   ))}
                 </div>
 
+                <div className="fill-grid-row fill-grid-ghost-row">
+                  <div className="fill-grid-label">Ghost</div>
+                  {steps.map((step) => (
+                    <button
+                      key={`ghost-${step.index}`}
+                      className={`fill-grid-cell ghost-cell ${step.ghost ? 'is-active' : ''} ${currentStep === step.index ? 'is-playing' : ''}`}
+                      onClick={() => setSteps((current) => toggleGhostInFillSteps(current, step.index))}
+                    >
+                      ()
+                    </button>
+                  ))}
+                </div>
+
                 {FILL_EDITOR_INSTRUMENTS.map((instrument) => (
                   <div className="fill-grid-row" key={instrument.id}>
                     <div className="fill-grid-label">{instrument.label}</div>
@@ -428,7 +466,7 @@ export default function FillEditorPage({ navigate }) {
                   <article className="saved-pattern-item" key={item.id}>
                     <div>
                       <h4>{item.title}</h4>
-                      <p>更新日時: {formatDate(item.updated_at)}</p>
+                      <p>作成日時: {formatDate(item.created_at)}</p>
                       <p>長さ: {FILL_LENGTH_OPTIONS.find((option) => option.value === (item.fill_length_type || 'full_bar'))?.label} / 分解能: {FILL_RESOLUTION_OPTIONS.find((option) => option.value === (item.resolution || '16th'))?.label}</p>
                       <div className="saved-pattern-toggle-row">
                         <span>公開</span>
@@ -490,16 +528,13 @@ export default function FillEditorPage({ navigate }) {
                     <div className="saved-pattern-actions">
                       <button
                         onClick={() => playSequence(
-                          buildPlaybackSequenceFromFillSteps(
-                            parseStoredStepsJson(
-                              item.steps_json,
-                              item.fill_length_type || 'full_bar',
-                              item.resolution || '16th',
-                            ),
+                          buildPlaybackSequenceFromStoredPatternRecord(
+                            item,
                             item.fill_length_type || 'full_bar',
                             item.resolution || '16th',
                           ),
-                          item.resolution || '16th'
+                          item.resolution || '16th',
+                          'standard'
                         )}
                         disabled={!samplesReady || isPlaying}
                       >

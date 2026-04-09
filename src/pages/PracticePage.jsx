@@ -22,10 +22,17 @@ import {
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useI18n } from '../contexts/I18nContext.jsx'
 import { useDrumPlaybackEngine } from '../hooks/useDrumPlaybackEngine'
-import { createFillInPracticePatterns } from '../utils/fillGenerator'
-import { buildFillPhraseFromStoredPattern, buildSequenceFromPracticePatterns } from '../utils/fillEditorModel'
-import { createPagePatterns } from '../utils/patternGenerator'
+import { createCanonicalFillInPracticePatterns } from '../utils/fillGenerator'
+import {
+  buildNotationPatternsFromCanonicalPatterns,
+  buildPlaybackSequenceFromCanonicalPatterns,
+} from '../utils/fillEditorModel'
+import { createCanonicalPagePatterns } from '../utils/patternGenerator'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
+
+function isMissingPatternJsonColumn(error) {
+  return String(error?.message || '').includes('pattern_json')
+}
 
 export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   const [practiceMode, setPracticeMode] = useState('accent')
@@ -154,11 +161,19 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
     }
 
     async function loadPracticeFills() {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('fill_patterns')
-        .select('id, fill_length_type, resolution, include_in_practice, steps_json')
+        .select('id, fill_length_type, resolution, include_in_practice, steps_json, pattern_json')
         .eq('owner_user_id', user.id)
         .eq('include_in_practice', true)
+
+      if (isMissingPatternJsonColumn(error)) {
+        ;({ data, error } = await supabase
+          .from('fill_patterns')
+          .select('id, fill_length_type, resolution, include_in_practice, steps_json')
+          .eq('owner_user_id', user.id)
+          .eq('include_in_practice', true))
+      }
 
       if (error) {
         console.error('Failed to load custom practice fills:', error)
@@ -166,44 +181,56 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
         return
       }
 
-      setPracticeEnabledCustomFills((data || []).map(buildFillPhraseFromStoredPattern).filter(Boolean))
+      setPracticeEnabledCustomFills(data || [])
     }
 
     loadPracticeFills()
   }, [user?.id, refreshKey])
 
-  const patterns = useMemo(() => (
-    createPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
+  const canonicalPatterns = useMemo(() => (
+    createCanonicalPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
   ), [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
 
-  const fillPatterns = useMemo(() => (
-    createFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, 'vexflow', practiceEnabledCustomFills)
+  const canonicalFillPatterns = useMemo(() => (
+    createCanonicalFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, 'vexflow', practiceEnabledCustomFills)
   ), [fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillOpenHiHat, refreshKey, practiceEnabledCustomFills])
+
+  const notationPatterns = useMemo(() => (
+    buildNotationPatternsFromCanonicalPatterns(canonicalPatterns)
+  ), [canonicalPatterns])
+
+  const notationFillPatterns = useMemo(() => (
+    buildNotationPatternsFromCanonicalPatterns(canonicalFillPatterns)
+  ), [canonicalFillPatterns])
+
+  const fillPlaybackResolution = useMemo(
+    () => canonicalFillPatterns[0]?.resolution || '16th',
+    [canonicalFillPatterns]
+  )
 
   const activePatternOffsets = useMemo(() => {
     let offset = 0
-    return patterns.map((pattern) => {
+    return notationPatterns.map((pattern) => {
       const start = offset
       offset += pattern.totalSteps || 0
       return start
     })
-  }, [patterns])
+  }, [notationPatterns])
 
   const activeFillPatternOffsets = useMemo(() => {
     let offset = 0
-    return fillPatterns.map((pattern) => {
+    return notationFillPatterns.map((pattern) => {
       const start = offset
       offset += pattern.totalSteps || 0
       return start
     })
-  }, [fillPatterns])
+  }, [notationFillPatterns])
 
   const playbackSteps = useMemo(() => (
-    buildSequenceFromPracticePatterns(
-      practiceMode === 'fillin' ? fillPatterns : patterns,
-      practiceMode
+    buildPlaybackSequenceFromCanonicalPatterns(
+      practiceMode === 'fillin' ? canonicalFillPatterns : canonicalPatterns
     )
-  ), [patterns, fillPatterns, practiceMode])
+  ), [canonicalPatterns, canonicalFillPatterns, practiceMode])
 
   const {
     samplesReady,
@@ -270,7 +297,16 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
       <div className="button-row">
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>{localize('生成', 'Generate')}</button>
         <button onClick={() => setRefreshKey((prev) => prev + 1)}>{localize('再生成', 'Regenerate')}</button>
-        <button onClick={() => playSequence(playbackSteps, practiceMode === 'fillin' ? '16th' : noteType)} disabled={isPlaying || !samplesReady}>{localize('再生', 'Play')}</button>
+        <button
+          onClick={() => playSequence(
+            playbackSteps,
+            practiceMode === 'fillin' ? fillPlaybackResolution : noteType,
+            practiceMode === 'accent' ? 'accent_exercise' : 'standard'
+          )}
+          disabled={isPlaying || !samplesReady}
+        >
+          {localize('再生', 'Play')}
+        </button>
         <button onClick={stopPlayback} disabled={!isPlaying}>{localize('停止', 'Stop')}</button>
       </div>
 
@@ -507,7 +543,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
               <h2>{practiceMode === 'accent' ? localize('アクセント譜', 'Accent Score') : localize('フィルイン譜', 'Fill-In Score')}</h2>
               <div className="svg-preview-list">
                 {practiceMode === 'accent' ? (
-                  patterns.map((pattern, index) => (
+                  notationPatterns.map((pattern, index) => (
                     <VexFlowNotationPreview
                       key={`preview-${refreshKey}-${index}`}
                       pattern={pattern}
@@ -517,7 +553,7 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
                     />
                   ))
                 ) : (
-                  fillPatterns.map((pattern, index) => (
+                  notationFillPatterns.map((pattern, index) => (
                     <VexFlowNotationPreview
                       key={`fill-preview-${refreshKey}-${index}`}
                       pattern={pattern}

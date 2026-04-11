@@ -861,6 +861,7 @@ button {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.header-icon-button,
 .settings-gear-button {
   width: 44px;
   height: 44px;
@@ -872,8 +873,109 @@ button {
   line-height: 1;
 }
 
+.header-icon-button:hover,
 .settings-gear-button:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.announcement-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+}
+
+.announcement-badge {
+  position: absolute;
+  top: 8px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff6f91;
+  box-shadow: 0 0 0 2px rgba(7, 14, 28, 0.95);
+}
+
+.announcement-modal {
+  width: min(100%, 680px);
+}
+
+.announcement-list,
+.announcement-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.announcement-list-item {
+  width: 100%;
+  padding: 18px;
+  border: 1px solid rgba(145, 187, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  text-align: left;
+  display: grid;
+  gap: 10px;
+}
+
+.announcement-list-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(145, 187, 255, 0.24);
+}
+
+.announcement-list-item strong,
+.announcement-detail-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text-main);
+}
+
+.announcement-list-item span,
+.announcement-detail-summary,
+.announcement-body-list {
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.announcement-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.announcement-type-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(88, 240, 207, 0.12);
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.announcement-date {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.announcement-back-button {
+  justify-self: start;
+}
+
+.announcement-body-list {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.announcement-body-list li + li {
+  margin-top: 8px;
 }
 
 .practice-tab {
@@ -1323,6 +1425,12 @@ button {
     font-size: 0.88rem;
   }
 
+  .header-icon-button,
+  .settings-gear-button {
+    width: 40px;
+    height: 40px;
+  }
+
   .route-nav {
     grid-column: 1 / -1;
     width: 100%;
@@ -1466,6 +1574,14 @@ button {
   .auth-link-button {
     padding: 0 10px;
     font-size: 0.82rem;
+  }
+
+  .announcement-modal {
+    padding: 22px;
+  }
+
+  .announcement-list-item {
+    padding: 16px;
   }
 
   .menu-toggle {

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import AccountSettingsModal from './components/AccountSettingsModal.jsx'
+import AnnouncementsModal from './components/AnnouncementsModal.jsx'
+import { ANNOUNCEMENTS_STORAGE_KEY, getLatestPublishedAnnouncement } from './constants/updates.js'
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx'
 import { I18nProvider, useI18n } from './contexts/I18nContext.jsx'
 import FillEditorPage from './pages/FillEditorPage.jsx'
@@ -34,9 +36,16 @@ function AppShell() {
   const [pathname, setPathname] = useState(() => normalizePathname(window.location.pathname))
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isAnnouncementsOpen, setIsAnnouncementsOpen] = useState(false)
   const { authError, isAuthLoading, isProfileLoading, needsOnboarding, profile, signOut, user } = useAuth()
   const { language, languages, setLanguage, t } = useI18n()
   const canUseAppNavigation = Boolean(user && !needsOnboarding)
+  const latestAnnouncement = useMemo(() => getLatestPublishedAnnouncement(), [])
+  const [lastReadAnnouncementId, setLastReadAnnouncementId] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return window.localStorage.getItem(ANNOUNCEMENTS_STORAGE_KEY) || ''
+  })
+  const hasUnreadAnnouncements = Boolean(latestAnnouncement?.id && latestAnnouncement.id !== lastReadAnnouncementId)
 
   const applyRoute = (nextPath, replace = false) => {
     const normalized = normalizePathname(nextPath)
@@ -53,6 +62,12 @@ function AppShell() {
 
   const navigate = (nextPath) => {
     applyRoute(nextPath, false)
+  }
+
+  const markAnnouncementsAsRead = () => {
+    if (!latestAnnouncement?.id || typeof window === 'undefined') return
+    window.localStorage.setItem(ANNOUNCEMENTS_STORAGE_KEY, latestAnnouncement.id)
+    setLastReadAnnouncementId(latestAnnouncement.id)
   }
 
   useEffect(() => {
@@ -174,6 +189,16 @@ function AppShell() {
             </label>
           </div>
 
+          <button
+            type="button"
+            className="header-icon-button announcement-button"
+            onClick={() => setIsAnnouncementsOpen(true)}
+            aria-label={language === 'ja' ? 'お知らせを開く' : 'Open announcements'}
+          >
+            <span aria-hidden="true">🔔</span>
+            {hasUnreadAnnouncements ? <span className="announcement-badge" /> : null}
+          </button>
+
           {user ? (
             <button
               type="button"
@@ -227,6 +252,11 @@ function AppShell() {
         </main>
       ) : page}
 
+      <AnnouncementsModal
+        isOpen={isAnnouncementsOpen}
+        onClose={() => setIsAnnouncementsOpen(false)}
+        onOpen={markAnnouncementsAsRead}
+      />
       <AccountSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   )

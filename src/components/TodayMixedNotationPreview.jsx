@@ -22,12 +22,10 @@ export default function TodayMixedNotationPreview({ beatBlocks = [] }) {
 
     async function render() {
       try {
-        const vexflow = await import('../../vendor/vexflow/src/index.ts')
-        const { loadBravura } = await import('../../vendor/vexflow/src/fonts/load_bravura.ts')
+        const vexflow = await import('vexflow4')
         if (cancelled || !containerRef.current) return
 
         const { Beam, Flow, Formatter, Renderer, Stave, Tuplet, Voice } = vexflow
-        loadBravura()
         Flow.setMusicFont('Bravura')
         const width = Math.max(900, container.parentElement?.clientWidth || 1100)
         const rowHeight = 170

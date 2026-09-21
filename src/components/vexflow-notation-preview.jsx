@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
 function getDurationCode(noteType, mode, resolution = '16th') {
+  if (mode === 'reading') {
+    if (resolution === '8th_triplet') return '8'
+    if (resolution === '16th_triplet') return '16'
+  }
   if (mode === 'fillin') {
     if (resolution === '32nd') return '32'
     if (resolution === '8th_triplet') return '8'

@@ -1,16 +1,32 @@
-# React + Vite
+# Drum Pattern Maker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ドラムのアクセント練習とフィルイン練習を生成・再生し、フィルインを作成、保存、公開できる React アプリケーションです。
 
-Currently, two official plugins are available:
+## 開発を始めるには
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+ビルドと静的解析は以下です。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run build
+npm run lint
+```
 
-## Expanding the ESLint configuration
+## 環境変数
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+ログイン、フィル保存、コミュニティ機能には Supabase を使用します。`.env.local` に次を設定してください。
+
+```env
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+```
+
+未設定でも画面は起動しますが、認証とデータベースを使う機能は利用できません。データベースの変更は `supabase/migrations/` を順番に適用します。問い合わせ API を有効にする場合は、デプロイ環境に `SLACK_FEEDBACK_WEBHOOK_URL` も設定します。
+
+## 設計資料
+
+アプリ固有の構成、リズムデータ形式、画面ごとの責務、拡張時の注意点は [開発アーキテクチャ](docs/architecture.md) にまとめています。

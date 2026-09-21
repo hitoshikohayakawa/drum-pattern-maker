@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import VexFlowNotationPreview from '../components/vexflow-notation-preview.jsx'
+import TodayMixedNotationPreview from '../components/TodayMixedNotationPreview.jsx'
 import {
   BAR_OPTIONS,
   CYMBAL_TONE_OPTIONS,
@@ -31,12 +32,20 @@ import {
 import { resolutionFromGridProfile } from '../constants/rhythmSchema.js'
 import { createCanonicalPagePatterns } from '../utils/patternGenerator'
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient'
+import {
+  createTodayPracticeMenu,
+  buildTodayMixedPlaybackSequence,
+  createSelectedReadingPractice,
+  getTodayPracticeHistory,
+  recordTodayPracticeResult,
+} from '../utils/todayPractice'
 
 function isMissingPatternJsonColumn(error) {
   return String(error?.message || '').includes('pattern_json')
 }
 
 export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
+  const [practiceView, setPracticeView] = useState('today')
   const [practiceMode, setPracticeMode] = useState('accent')
   const [noteType, setNoteType] = useState('8th')
   const [difficulty, setDifficulty] = useState('easy')
@@ -58,6 +67,17 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   const [floorTomTone, setFloorTomTone] = useState('standard')
   const [cymbalTone, setCymbalTone] = useState('tight')
   const [practiceEnabledCustomFills, setPracticeEnabledCustomFills] = useState([])
+  const [todayMenu, setTodayMenu] = useState(null)
+  const [todayIndex, setTodayIndex] = useState(0)
+  const [todayHistory, setTodayHistory] = useState(() => getTodayPracticeHistory())
+  const [todayFeedback, setTodayFeedback] = useState('')
+  const [todayDifficulty, setTodayDifficulty] = useState('normal')
+  const [todayGeneration, setTodayGeneration] = useState(0)
+  const [manualRests, setManualRests] = useState(false)
+  const [manualSyncopation, setManualSyncopation] = useState(false)
+  const [manualAccents, setManualAccents] = useState(false)
+  const [manualTriplets, setManualTriplets] = useState(false)
+  const [manualExerciseType, setManualExerciseType] = useState('reading')
   const { user } = useAuth()
   const { language } = useI18n()
   const isJapanese = language === 'ja'
@@ -196,8 +216,17 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
   }, [user?.id, refreshKey])
 
   const canonicalPatterns = useMemo(() => (
-    createCanonicalPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
-  ), [noteType, difficulty, bars, orchestration, kickSetting, refreshKey])
+    manualRests || manualSyncopation || manualAccents || manualTriplets || manualExerciseType !== 'reading'
+      ? [createSelectedReadingPractice({
+          noteValue: noteType,
+          includeRests: manualRests,
+          includeSyncopation: manualSyncopation,
+          includeAccents: manualAccents,
+          includeTriplets: manualTriplets,
+          exerciseType: manualExerciseType,
+        })]
+      : createCanonicalPagePatterns(noteType, difficulty, bars, orchestration, kickSetting)
+  ), [noteType, difficulty, bars, orchestration, kickSetting, refreshKey, manualRests, manualSyncopation, manualAccents, manualTriplets, manualExerciseType])
 
   const canonicalFillPatterns = useMemo(() => (
     createCanonicalFillInPracticePatterns(fillGenre, fillGroove, fillLengthMode, fillPatternMode, fillBarCount, fillGrooveLock, fillOpenHiHat, 'vexflow', practiceEnabledCustomFills)
@@ -230,6 +259,11 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
       practiceMode === 'fillin' ? canonicalFillPatterns : canonicalPatterns
     )
   ), [canonicalPatterns, canonicalFillPatterns, practiceMode])
+
+  const todayExercise = todayMenu?.exercises?.[todayIndex] || null
+  const todayPlaybackSteps = useMemo(() => (
+    todayExercise ? buildTodayMixedPlaybackSequence(todayExercise.attributes.beatBlocks) : []
+  ), [todayExercise])
 
   const {
     samplesReady,
@@ -279,6 +313,42 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
     }
   }, [playbackConfig])
 
+  const startTodayPractice = () => {
+    stopPlayback()
+    setTodayMenu(createTodayPracticeMenu({
+      history: todayHistory,
+      difficulty: todayDifficulty,
+      seed: `${new Date().toDateString()}-${todayGeneration}`,
+    }))
+    setTodayGeneration((current) => current + 1)
+    setTodayIndex(0)
+    setTodayFeedback('')
+    setIsMenuOpen(false)
+  }
+
+  const recordTodayFeedback = (result) => {
+    if (!todayExercise || !todayMenu) return
+    stopPlayback()
+    const nextHistory = recordTodayPracticeResult({
+      menuId: todayMenu.id,
+      exerciseId: todayExercise.id,
+      exerciseType: todayExercise.exerciseType,
+      result,
+      tempo: todayExercise.tempo,
+      difficulty: todayExercise.attributes.difficulty,
+      completedAt: new Date().toISOString(),
+    })
+    setTodayHistory(nextHistory)
+    setTodayFeedback(result)
+  }
+
+  const goToNextTodayExercise = () => {
+    if (!todayMenu) return
+    stopPlayback()
+    setTodayIndex((current) => Math.min(current + 1, todayMenu.exercises.length - 1))
+    setTodayFeedback('')
+  }
+
   const practiceMenuButtons = PRACTICE_MENU.map((item) => (
     <button
       key={item.value}
@@ -327,6 +397,97 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
     </>
   )
 
+  if (practiceView === 'today') {
+    const isLastTodayExercise = Boolean(todayMenu && todayIndex === todayMenu.exercises.length - 1)
+
+    return (
+      <div className="workspace today-practice-workspace">
+        <aside className={`settings-panel no-print ${isMenuOpen ? 'is-open' : ''}`}>
+          <div className="panel-scroll">
+            <div className="panel-intro today-panel-intro">
+              <p className="panel-kicker">Daily Rhythm Lab</p>
+              <h2>{localize('今日の練習', "Today's Practice")}</h2>
+              <p>{localize('譜面を選ばず、その日の状態に合わせた独自の練習メニューを順番に進めます。', 'No score picking—move through an original, adaptive practice menu one exercise at a time.')}</p>
+            </div>
+
+            <div className="practice-view-switch">
+              <button className="practice-tab is-active" type="button">{localize('今日の練習', "Today's Practice")}</button>
+              <button className="practice-tab" type="button" onClick={() => setPracticeView('choose')}>{localize('練習を選ぶ', 'Choose Practice')}</button>
+            </div>
+
+            <section className="today-menu-card">
+              <div className="today-difficulty-control">
+                <span>{localize('難易度', 'Difficulty')}</span>
+                <div>
+                  {[
+                    ['easy', localize('簡単', 'Easy')],
+                    ['normal', localize('普通', 'Normal')],
+                    ['hard', localize('難しい', 'Hard')],
+                  ].map(([value, label]) => (
+                    <button key={value} type="button" className={todayDifficulty === value ? 'is-selected' : ''} onClick={() => setTodayDifficulty(value)}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <p className="today-menu-duration">{todayMenu ? localize('16小節・約8分', '16 bars · about 8 minutes') : localize('A4 1ページ分の自動メニュー', 'An automatic A4-page practice menu')}</p>
+              {todayMenu ? (
+                <ol className="today-menu-list">
+                  {todayMenu.exercises.map((exercise, index) => (
+                    <li key={exercise.id} className={index === todayIndex ? 'is-current' : index < todayIndex ? 'is-done' : ''}>
+                      <span>{index + 1}</span>
+                      <div><strong>{exercise.title}</strong><small>{exercise.minutes}{localize('分', ' min')} · {exercise.tempo} BPM</small></div>
+                    </li>
+                  ))}
+                </ol>
+              ) : <p className="saved-pattern-empty">{localize('開始すると、4段×4小節の独自リズムリーディング譜を作成します。各拍で音価と3連符を組み合わせます。', 'Start to create an original four-row, 16-bar reading page that mixes note values and triplets beat by beat.')}</p>}
+              <button className="today-start-button" type="button" onClick={startTodayPractice}>
+                {todayMenu ? localize('今日のメニューを作り直す', 'Create a New Menu') : localize('今日の練習を始める', "Start Today's Practice")}
+              </button>
+            </section>
+
+            <section className="control-panel today-sound-controls">
+              <div className="control-item"><label>{localize('音源ライブラリ', 'Kit Library')}</label><select value={kitLibrary} onChange={(event) => setKitLibrary(event.target.value)}>{KIT_LIBRARY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{kitLibraryLabel(option.value)}</option>)}</select></div>
+              <div className="control-item"><label>{localize('スネア音色', 'Snare Tone')}</label><select value={snareTone} onChange={(event) => setSnareTone(event.target.value)}>{SNARE_TONE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{snareToneLabel(option.value)}</option>)}</select></div>
+            </section>
+          </div>
+        </aside>
+
+        <section className="sheet-area practice-sheet-area">
+          <div className="practice-sheet-stack">
+            {todayExercise ? (
+              <>
+                <div className="today-exercise-header no-print">
+                  <p>{localize(`練習 ${todayExercise.order} / ${todayMenu.exercises.length}`, `Exercise ${todayExercise.order} / ${todayMenu.exercises.length}`)}</p>
+                  <h2>{todayExercise.title}</h2>
+                  <div className="today-exercise-meta"><span>{todayExercise.exerciseType}</span><span>{todayExercise.tempo} BPM</span><span>{todayExercise.minutes}{localize('分', ' min')}</span><span>{({ easy: localize('簡単', 'Easy'), normal: localize('普通', 'Normal'), hard: localize('難しい', 'Hard') }[todayMenu.difficulty])}</span><span>{todayExercise.attributes.triplets ? localize('3連符', 'Triplets') : todayExercise.attributes.syncopationLevel ? localize('シンコペーション', 'Syncopation') : todayExercise.attributes.noteValues.join(' + ')}</span></div>
+                  <p className="today-instruction">{todayExercise.instruction}</p>
+                </div>
+                <div className="sheet-paper practice-sheet-paper is-accent-mode">
+                  <div className="abc-section practice-score-section"><h2>{localize('練習譜', 'Practice Score')}</h2><TodayMixedNotationPreview beatBlocks={todayExercise.attributes.beatBlocks} /></div>
+                </div>
+                <section className="today-action-card no-print">
+                  <div className="button-row">
+                    <button onClick={() => playSequence(todayPlaybackSteps, '16th', todayExercise.exerciseType === 'accent' ? 'accent_exercise' : 'standard')} disabled={isPlaying || !samplesReady}>{localize('再生', 'Play')}</button>
+                    <button onClick={stopPlayback} disabled={!isPlaying}>{localize('停止', 'Stop')}</button>
+                  </div>
+                  <p>{localize('終えた感触を記録すると、次回のテンポと譜面の複雑さに反映します。', 'Record how it felt; the next menu adapts its tempo and rhythm complexity.')}</p>
+                  <div className="today-feedback-row">
+                    <button className={todayFeedback === 'complete' ? 'is-selected' : ''} onClick={() => recordTodayFeedback('complete')}>{localize('完了', 'Complete')}</button>
+                    <button className={todayFeedback === 'hard' ? 'is-selected' : ''} onClick={() => recordTodayFeedback('hard')}>{localize('難しかった', 'Too Hard')}</button>
+                    <button className={todayFeedback === 'easy' ? 'is-selected' : ''} onClick={() => recordTodayFeedback('easy')}>{localize('簡単だった', 'Too Easy')}</button>
+                    <button onClick={goToNextTodayExercise} disabled={!todayFeedback || isLastTodayExercise}>{isLastTodayExercise ? localize('今日の練習完了', 'Daily Practice Complete') : localize('次へ', 'Next')}</button>
+                  </div>
+                  {isLastTodayExercise && todayFeedback ? <p className="today-complete-message">{localize('今日の練習を記録しました。次回はこの結果に合わせて調整します。', 'Today is recorded. Your next menu will adapt to these results.')}</p> : null}
+                </section>
+              </>
+            ) : (
+              <div className="today-empty-state"><p className="panel-kicker">Ready when you are</p><h2>{localize('今日のリズムリーディングを始めよう', "Start today's rhythm reading")}</h2><p>{localize('A4 1ページ相当の16小節を、4分・8分・16分・3連符・休符・裏拍へ段階的に進めます。すべて独自の組合せで生成します。', 'Create an original 16-bar, A4-page practice score that progresses through quarters, eighths, sixteenths, triplets, rests, and offbeats.')}</p><button className="today-start-button" onClick={startTodayPractice}>{localize('今日の練習を始める', "Start Today's Practice")}</button></div>
+            )}
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <>
       <section className="mobile-action-panel no-print">
@@ -336,6 +497,10 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
       <div className="workspace">
         <aside className={`settings-panel no-print ${isMenuOpen ? 'is-open' : ''}`}>
           <div className="panel-scroll">
+            <div className="practice-view-switch no-print">
+              <button className="practice-tab" type="button" onClick={() => setPracticeView('today')}>{localize('今日の練習', "Today's Practice")}</button>
+              <button className="practice-tab is-active" type="button">{localize('練習を選ぶ', 'Choose Practice')}</button>
+            </div>
             <div className="mobile-practice-nav">
               {practiceMenuButtons}
             </div>
@@ -396,6 +561,31 @@ export default function PracticePage({ isMenuOpen, setIsMenuOpen }) {
                         <option key={option.value} value={option.value}>{kickLabel(option.value)}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="manual-reading-controls">
+                    <p>{localize('リズムリーディング指定', 'Rhythm Reading Options')}</p>
+                    <div className="control-item">
+                      <label>{localize('練習タイプ', 'Exercise Type')}</label>
+                      <select value={manualExerciseType} onChange={(event) => setManualExerciseType(event.target.value)}>
+                        <option value="reading">Reading</option>
+                        <option value="accent">Accent</option>
+                        <option value="sticking">Sticking</option>
+                        <option value="fill">Fill</option>
+                        <option value="coordination">Coordination</option>
+                      </select>
+                    </div>
+                    {[
+                      ['rests', localize('休符を含める', 'Include rests'), manualRests, setManualRests],
+                      ['syncopation', localize('シンコペーション', 'Syncopation'), manualSyncopation, setManualSyncopation],
+                      ['accents', localize('アクセントを指定', 'Add accents'), manualAccents, setManualAccents],
+                      ['triplets', localize('3連符を使う', 'Use triplets'), manualTriplets, setManualTriplets],
+                    ].map(([id, label, enabled, setEnabled]) => (
+                      <label className="manual-reading-option" key={id}>
+                        <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+                        <span>{label}</span>
+                      </label>
+                    ))}
                   </div>
                 </>
               ) : (
